@@ -1,18 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Plus,
-  CreditCard,
-  DollarSign,
-  Calendar,
-  User,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  Trash2,
-  Edit3,
-} from "lucide-react";
-import { receiptsAPI, type Receipt, type AddPaymentData, type PaymentHistory } from "../../../services/receipts";
+import { CreditCard, DollarSign, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { receiptsAPI, type Receipt, type AddPaymentData } from "../../../services/receipts";
 import { Button } from "../../../components/ui/Button";
 
 interface PaymentManagerProps {
@@ -95,7 +84,9 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
     }
 
     if (paymentData.amount > receipt.payment.balance) {
-      setError(`Payment amount cannot exceed balance of ${formatCurrency(receipt.payment.balance, receipt.payment.currency)}`);
+      setError(
+        `Payment amount cannot exceed balance of ${formatCurrency(receipt.payment.balance, receipt.payment.currency)}`
+      );
       return;
     }
 
@@ -104,15 +95,15 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
       setError(null);
 
       const result = await receiptsAPI.addPayment(receipt._id, paymentData);
-      
+
       // Update the receipt with new payment info
       const updatedReceipt = {
         ...receipt,
-        payment: result.data.receipt.payment
+        payment: result.data.receipt.payment,
       };
-      
+
       onUpdate(updatedReceipt);
-      
+
       // Reset form
       setPaymentData({
         amount: 0,
@@ -141,7 +132,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
             <p className="text-sm text-gray-600">Track and manage receipt payments</p>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           <span
             className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-medium ${getPaymentStatusColor(
@@ -151,14 +142,9 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
             {getPaymentStatusIcon(receipt.payment.status)}
             <span className="capitalize">{receipt.payment.status}</span>
           </span>
-          
+
           {receipt.payment.status !== "paid" && (
-            <Button
-              onClick={() => setShowAddPayment(!showAddPayment)}
-              variant="primary"
-              size="sm"
-            >
-              <Plus size={16} className="mr-1" />
+            <Button onClick={() => setShowAddPayment(!showAddPayment)} variant="primary" size="sm">
               Add Payment
             </Button>
           )}
@@ -173,14 +159,14 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
             {formatCurrency(receipt.payment.totalAmount, receipt.payment.currency)}
           </div>
         </div>
-        
+
         <div className="bg-green-50 rounded-lg p-4">
           <div className="text-sm text-gray-600 mb-1">Amount Paid</div>
           <div className="text-xl font-bold text-green-600">
             {formatCurrency(receipt.payment.amountPaid, receipt.payment.currency)}
           </div>
         </div>
-        
+
         <div className={`rounded-lg p-4 ${remainingBalance > 0 ? "bg-red-50" : "bg-green-50"}`}>
           <div className="text-sm text-gray-600 mb-1">Balance</div>
           <div className={`text-xl font-bold ${remainingBalance > 0 ? "text-red-600" : "text-green-600"}`}>
@@ -213,18 +199,16 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
           className="border border-gray-200 rounded-lg p-4 mb-6 bg-gray-50"
         >
           <h4 className="text-md font-semibold text-gray-900 mb-4">Add New Payment</h4>
-          
+
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
               <p className="text-red-800 text-sm">{error}</p>
             </div>
           )}
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Amount *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Amount *</label>
               <input
                 type="number"
                 min="0"
@@ -236,11 +220,9 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
                 placeholder="0.00"
               />
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Method *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method *</label>
               <select
                 value={paymentData.method}
                 onChange={(e) => setPaymentData({ ...paymentData, method: e.target.value as any })}
@@ -251,34 +233,8 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
                 <option value="mobile_money">Mobile Money</option>
               </select>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Reference Number
-              </label>
-              <input
-                type="text"
-                value={paymentData.reference}
-                onChange={(e) => setPaymentData({ ...paymentData, reference: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                placeholder="Transaction reference (optional)"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notes
-              </label>
-              <input
-                type="text"
-                value={paymentData.notes}
-                onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                placeholder="Additional notes (optional)"
-              />
-            </div>
           </div>
-          
+
           <div className="flex items-center justify-end space-x-3">
             <Button
               onClick={() => {
@@ -289,11 +245,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleAddPayment}
-              variant="primary"
-              disabled={loading || paymentData.amount <= 0}
-            >
+            <Button onClick={handleAddPayment} variant="primary" disabled={loading || paymentData.amount <= 0}>
               {loading ? "Adding..." : "Add Payment"}
             </Button>
           </div>
@@ -320,19 +272,15 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
                       {formatCurrency(payment.amount, receipt.payment.currency)}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {payment.method.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      {payment.method.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                       {payment.reference && ` • ${payment.reference}`}
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="text-right">
-                  <div className="text-sm text-gray-900">
-                    {formatDate(payment.date)}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    by {payment.receivedBy.fullName}
-                  </div>
+                  <div className="text-sm text-gray-900">{formatDate(payment.date)}</div>
+                  <div className="text-xs text-gray-600">by {payment.receivedBy.fullName}</div>
                 </div>
               </motion.div>
             ))}

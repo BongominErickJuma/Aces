@@ -1,6 +1,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
 import type { LoginCredentials } from "../../../types/auth";
@@ -47,6 +48,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading }) => 
           },
         })}
       />
+
+      <div className="flex justify-end">
+        <Link
+          to="/forgot-password"
+          className="text-sm text-aces-green hover:text-aces-green-dark transition-colors duration-200 hover:underline"
+        >
+          Forgot your password?
+        </Link>
+      </div>
 
       <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
         {isLoading ? (

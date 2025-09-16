@@ -104,7 +104,7 @@ export interface CreateReceiptData {
   quotationId?: string;
   client: ReceiptClient;
   locations?: ReceiptLocations;
-  services: Omit<ReceiptService, "total">[];
+  services: ReceiptService[];
   payment: {
     currency: "UGX" | "USD";
     method?: "cash" | "bank_transfer" | "mobile_money";
@@ -196,17 +196,42 @@ export const receiptsAPI = {
       const response = await api.post("/receipts", data);
       return response.data;
     } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string; error?: { details?: { field?: string; reason?: string } } } } };
-      throw new Error(
-        axiosError.response?.data?.error?.details?.reason || 
-        axiosError.response?.data?.message || 
-        "Failed to create receipt"
-      );
+      console.error("Full error object:", error);
+      const axiosError = error as {
+        response?: {
+          status?: number;
+          data?: { message?: string; error?: { details?: { field?: string; reason?: string } } };
+        };
+        message?: string;
+        code?: string;
+      };
+
+      console.error("Axios error details:", {
+        status: axiosError.response?.status,
+        data: axiosError.response?.data,
+        message: axiosError.message,
+        code: axiosError.code,
+      });
+
+      let errorMessage = "Failed to create receipt";
+
+      if (axiosError.response?.data?.error?.details?.reason) {
+        errorMessage = axiosError.response.data.error.details.reason;
+      } else if (axiosError.response?.data?.message) {
+        errorMessage = axiosError.response.data.message;
+      } else if (axiosError.message) {
+        errorMessage = `Network error: ${axiosError.message}`;
+      }
+
+      throw new Error(errorMessage);
     }
   },
 
   // Create receipt from quotation
-  createFromQuotation: async (quotationId: string, data: CreateFromQuotationData): Promise<ApiResponse<{ receipt: Receipt }>> => {
+  createFromQuotation: async (
+    quotationId: string,
+    data: CreateFromQuotationData
+  ): Promise<ApiResponse<{ receipt: Receipt }>> => {
     try {
       const response = await api.post(`/receipts/from-quotation/${quotationId}`, data);
       return response.data;
@@ -222,8 +247,30 @@ export const receiptsAPI = {
       const response = await api.put(`/receipts/${id}`, data);
       return response.data;
     } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      throw new Error(axiosError.response?.data?.message || "Failed to update receipt");
+      const axiosError = error as {
+        response?: {
+          data?: {
+            message?: string;
+            error?: any;
+          };
+        };
+        message?: string;
+      };
+
+      let errorMessage = "Failed to update receipt";
+
+      if (axiosError.response?.data?.message) {
+        errorMessage = axiosError.response.data.message;
+      } else if (axiosError.response?.data?.error) {
+        errorMessage =
+          typeof axiosError.response.data.error === "string"
+            ? axiosError.response.data.error
+            : JSON.stringify(axiosError.response.data.error);
+      } else if (axiosError.message) {
+        errorMessage = axiosError.message;
+      }
+
+      throw new Error(errorMessage);
     }
   },
 
@@ -239,7 +286,10 @@ export const receiptsAPI = {
   },
 
   // Add payment to receipt
-  addPayment: async (id: string, data: AddPaymentData): Promise<ApiResponse<{ receipt: { receiptNumber: string; payment: ReceiptPayment } }>> => {
+  addPayment: async (
+    id: string,
+    data: AddPaymentData
+  ): Promise<ApiResponse<{ receipt: { receiptNumber: string; payment: ReceiptPayment } }>> => {
     try {
       const response = await api.post(`/receipts/${id}/payments`, data);
       return response.data;
@@ -262,7 +312,9 @@ export const receiptsAPI = {
   },
 
   // Generate receipt PDF
-  generatePDF: async (id: string): Promise<ApiResponse<{ pdfUrl: string; fileName: string; receiptNumber: string }>> => {
+  generatePDF: async (
+    id: string
+  ): Promise<ApiResponse<{ pdfUrl: string; fileName: string; receiptNumber: string }>> => {
     try {
       const response = await api.get(`/receipts/${id}/pdf`);
       return response.data;
@@ -286,7 +338,10 @@ export const receiptsAPI = {
   },
 
   // Send receipt PDF via email
-  sendPDF: async (id: string, data: SendReceiptData): Promise<ApiResponse<{ receiptNumber: string; sentTo: string }>> => {
+  sendPDF: async (
+    id: string,
+    data: SendReceiptData
+  ): Promise<ApiResponse<{ receiptNumber: string; sentTo: string }>> => {
     try {
       const response = await api.post(`/receipts/${id}/send`, data);
       return response.data;
@@ -297,9 +352,9 @@ export const receiptsAPI = {
   },
 
   // Bulk operations
-  bulkDelete: async (ids: string[]): Promise<ApiResponse<{ deletedCount: number }>> => {
+  bulkDelete: async (ids: string[]): Promise<ApiResponse<{ deletedCount: number; requestedCount: number }>> => {
     try {
-      const response = await api.post('/receipts/bulk/delete', { ids });
+      const response = await api.post("/receipts/bulk/delete", { receiptIds: ids });
       return response.data;
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } } };
@@ -307,25 +362,13 @@ export const receiptsAPI = {
     }
   },
 
-  bulkExport: async (ids: string[]): Promise<Blob> => {
+  bulkDownload: async (ids: string[]): Promise<ApiResponse<{ receipts: Array<{id: string, receiptNumber: string, downloadUrl: string}>, count: number }>> => {
     try {
-      const response = await api.post('/receipts/bulk/export', { ids }, {
-        responseType: 'blob'
-      });
+      const response = await api.post("/receipts/bulk/download", { receiptIds: ids });
       return response.data;
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } } };
-      throw new Error(axiosError.response?.data?.message || "Failed to export receipts");
-    }
-  },
-
-  sendBulkReminders: async (ids: string[]): Promise<ApiResponse<{ sentCount: number }>> => {
-    try {
-      const response = await api.post('/receipts/bulk/reminders', { ids });
-      return response.data;
-    } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      throw new Error(axiosError.response?.data?.message || "Failed to send reminders");
+      throw new Error(axiosError.response?.data?.message || "Failed to prepare bulk download");
     }
   },
 };

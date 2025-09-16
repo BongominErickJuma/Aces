@@ -1,26 +1,11 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import {
-  Save,
-  X,
-  User,
-  Mail,
-  Phone,
-  Shield,
-  AlertCircle,
-  CheckCircle,
-  Eye,
-  EyeOff,
-  Key,
-  UserCheck,
-  Settings,
-} from "lucide-react";
+import { User, Mail, Phone, Shield, AlertCircle, CheckCircle, Key, UserCheck, Settings } from "lucide-react";
 import { usersAPI, type CreateUserData } from "../../../services/users";
 import { Button } from "../../../components/ui/Button";
 
 interface UserCreateFormProps {
-  onSuccess: (user: any) => void;
   onCancel: () => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
@@ -28,7 +13,7 @@ interface UserCreateFormProps {
 
 interface FormData extends CreateUserData {}
 
-const UserCreateForm: React.FC<UserCreateFormProps> = ({ onSuccess, onCancel, isLoading, setIsLoading }) => {
+const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, setIsLoading }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -40,7 +25,6 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onSuccess, onCancel, is
     handleSubmit,
     watch,
     formState: { errors },
-    reset,
   } = useForm<FormData>({
     defaultValues: {
       fullName: "",
@@ -68,11 +52,6 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onSuccess, onCancel, is
       if (response.success) {
         setGeneratedPassword(response.data.temporaryPassword);
         setSuccess("User created successfully!");
-
-        // Wait a moment to show success, then call onSuccess
-        setTimeout(() => {
-          onSuccess(response.data.user);
-        }, 2000);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create user");
@@ -81,15 +60,40 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onSuccess, onCancel, is
     }
   };
 
-  const generateRandomPassword = () => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-    let password = "";
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
+  const validateCurrentStep = () => {
+    const formData = watch();
+
+    switch (currentStep) {
+      case 1:
+        return (
+          formData.fullName &&
+          formData.email &&
+          formData.role &&
+          formData.fullName.length >= 2 &&
+          /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formData.email)
+        );
+      case 2:
+        return true; // Contact info is optional
+      case 3:
+        return true; // Settings have defaults
+      default:
+        return false;
     }
-    return password;
   };
 
+  const handleNextStep = () => {
+    if (validateCurrentStep()) {
+      setCurrentStep(currentStep + 1);
+      setError(null);
+    } else {
+      setError("Please fill in all required fields before proceeding");
+    }
+  };
+
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSubmit(onSubmit)(e);
+  };
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "admin":
@@ -152,7 +156,6 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onSuccess, onCancel, is
                 size="sm"
                 className="flex items-center space-x-1"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 <span>{showPassword ? "Hide" : "Show"}</span>
               </Button>
             </div>
@@ -197,7 +200,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onSuccess, onCancel, is
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <form className="space-y-8">
         {/* Step 1: Basic Information */}
         {currentStep === 1 && (
           <motion.div
@@ -462,22 +465,17 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onSuccess, onCancel, is
 
           <div className="flex items-center space-x-3">
             {currentStep < 3 ? (
-              <Button
-                type="button"
-                onClick={() => setCurrentStep(currentStep + 1)}
-                variant="primary"
-                disabled={isLoading || !!success}
-              >
+              <Button type="button" onClick={handleNextStep} variant="primary" disabled={isLoading || !!success}>
                 Next
               </Button>
             ) : (
               <Button
-                type="submit"
+                type="button"
+                onClick={handleCreateUser}
                 disabled={isLoading || !!success}
                 variant="primary"
                 className="flex items-center space-x-2"
               >
-                <Save className="w-4 h-4" />
                 <span>{isLoading ? "Creating..." : success ? "User Created!" : "Create User"}</span>
               </Button>
             )}

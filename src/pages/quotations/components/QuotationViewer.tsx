@@ -2,10 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft,
   Download,
-  Share2,
-  Printer,
+  Receipt,
   FileText,
   Calendar,
   User,
@@ -144,10 +142,6 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -252,17 +246,10 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
 
   return (
     <PageLayout title={`Quotation ${quotation.quotationNumber}`}>
-      <div className="max-w-4xl mx-auto">
+      <div className="mx-auto">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Dashboard
-            </button>
             <div className="flex items-center gap-3">
               <FileText className="w-6 h-6 text-blue-600" />
               <div>
@@ -294,20 +281,6 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
                   Download PDF
                 </>
               )}
-            </button>
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              <Share2 className="w-4 h-4" />
-              Share
-            </button>
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-            >
-              <Printer className="w-4 h-4" />
-              Print
             </button>
           </div>
         </div>

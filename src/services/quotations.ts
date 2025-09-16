@@ -80,6 +80,16 @@ export interface CreateQuotationData {
   notes?: string;
 }
 
+export interface UpdateQuotationData {
+  type?: "Residential" | "International" | "Office";
+  client?: QuotationClient;
+  locations?: QuotationLocations;
+  services?: Omit<QuotationService, "total">[];
+  pricing?: QuotationPricing;  // Full pricing object including subtotal, taxAmount, totalAmount
+  termsAndConditions?: string;
+  notes?: string;
+}
+
 export interface QuotationFilters {
   page?: number;
   limit?: number;
@@ -156,7 +166,7 @@ export const quotationsAPI = {
   },
 
   // Update quotation
-  updateQuotation: async (id: string, data: Partial<CreateQuotationData>): Promise<ApiResponse<{ quotation: Quotation }>> => {
+  updateQuotation: async (id: string, data: UpdateQuotationData): Promise<ApiResponse<{ quotation: Quotation }>> => {
     try {
       const response = await api.put(`/quotations/${id}`, data);
       return response.data;
@@ -180,7 +190,7 @@ export const quotationsAPI = {
   // Extend quotation validity
   extendValidity: async (id: string, data: ExtendValidityData): Promise<ApiResponse<{ quotationNumber: string; newValidUntil: string; remainingDays: number }>> => {
     try {
-      const response = await api.post(`/quotations/${id}/extend`, data);
+      const response = await api.put(`/quotations/${id}/extend`, data);
       return response.data;
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } } };
@@ -236,9 +246,9 @@ export const quotationsAPI = {
   },
 
   // Bulk operations
-  bulkDelete: async (ids: string[]): Promise<ApiResponse<{ deletedCount: number }>> => {
+  bulkDelete: async (ids: string[]): Promise<ApiResponse<{ deletedCount: number; requestedCount: number }>> => {
     try {
-      const response = await api.post('/quotations/bulk/delete', { ids });
+      const response = await api.post('/quotations/bulk/delete', { quotationIds: ids });
       return response.data;
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } } };
@@ -246,15 +256,13 @@ export const quotationsAPI = {
     }
   },
 
-  bulkExport: async (ids: string[]): Promise<Blob> => {
+  bulkDownload: async (ids: string[]): Promise<ApiResponse<{ quotations: Array<{ id: string; quotationNumber: string; downloadUrl: string }>; count: number }>> => {
     try {
-      const response = await api.post('/quotations/bulk/export', { ids }, {
-        responseType: 'blob'
-      });
+      const response = await api.post('/quotations/bulk/download', { quotationIds: ids });
       return response.data;
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } } };
-      throw new Error(axiosError.response?.data?.message || "Failed to export quotations");
+      throw new Error(axiosError.response?.data?.message || "Failed to prepare bulk download");
     }
   },
 };

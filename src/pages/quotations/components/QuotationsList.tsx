@@ -20,13 +20,15 @@ import {
   List,
   Settings,
   RotateCcw,
-  Receipt,
+  Trash2,
   Home,
   Building2,
   Globe,
+  AlertTriangle,
 } from "lucide-react";
 import { quotationsAPI, type Quotation, type QuotationFilters } from "../../../services/quotations";
 import { Button } from "../../../components/ui/Button";
+import { useAuth } from "../../../context/useAuth";
 
 interface QuotationsListProps {
   onViewQuotation: (quotation: Quotation) => void;
@@ -34,6 +36,8 @@ interface QuotationsListProps {
 
 const QuotationsList: React.FC<QuotationsListProps> = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,9 +57,16 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [searchDebounceTimer, setSearchDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
+  const [deleteProgress, setDeleteProgress] = useState({ current: 0, total: 0 });
+  const [bulkDeleteModal, setBulkDeleteModal] = useState<{
+    isOpen: boolean;
+    count: number;
+  }>({ isOpen: false, count: 0 });
 
-  // New state for table view and bulk operations
-  const [viewMode, setViewMode] = useState<"list" | "table">("list");
+  // Bulk operations state
   const [selectedQuotations, setSelectedQuotations] = useState<Set<string>>(new Set());
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(["quotationNumber", "type", "client", "status", "amount", "validity", "date", "createdBy", "actions"])
@@ -67,10 +78,12 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
   const [extendingQuotation, setExtendingQuotation] = useState<Quotation | null>(null);
   const [extendDays, setExtendDays] = useState(30);
   const [extendReason, setExtendReason] = useState("");
+  const [isExtending, setIsExtending] = useState(false);
 
-  // Convert to receipt modal state
-  const [showConvertModal, setShowConvertModal] = useState(false);
-  const [convertingQuotation, setConvertingQuotation] = useState<Quotation | null>(null);
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingQuotation, setDeletingQuotation] = useState<Quotation | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadQuotations = async () => {
     try {
@@ -160,6 +173,7 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
     if (!extendingQuotation || !extendReason.trim()) return;
 
     try {
+      setIsExtending(true);
       await quotationsAPI.extendValidity(extendingQuotation._id, {
         days: extendDays,
         reason: extendReason,
@@ -171,48 +185,119 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
       loadQuotations(); // Refresh data
     } catch (err) {
       console.error("Failed to extend validity:", err);
+    } finally {
+      setIsExtending(false);
     }
   };
 
-  // Convert to receipt handler
-  const handleConvertToReceipt = (quotation: Quotation) => {
-    setConvertingQuotation(quotation);
-    setShowConvertModal(true);
-  };
+  // Delete handler
+  const handleDeleteQuotation = async () => {
+    if (!deletingQuotation) return;
 
-  // Navigate to create receipt from quotation
-  const confirmConvertToReceipt = () => {
-    if (convertingQuotation) {
-      navigate(`/create/receipt?fromQuotation=${convertingQuotation._id}`);
+    try {
+      setIsDeleting(true);
+      await quotationsAPI.deleteQuotation(deletingQuotation._id);
+      setShowDeleteModal(false);
+      setDeletingQuotation(null);
+      loadQuotations(); // Refresh data
+    } catch (err) {
+      console.error("Failed to delete quotation:", err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   // Bulk actions
-  const handleBulkDelete = async () => {
-    if (window.confirm(`Delete ${selectedQuotations.size} selected quotations?`)) {
-      try {
-        await quotationsAPI.bulkDelete(Array.from(selectedQuotations));
-        setSelectedQuotations(new Set());
-        loadQuotations();
-      } catch (err) {
-        console.error("Failed to delete quotations:", err);
-      }
+  const handleBulkDelete = () => {
+    setBulkDeleteModal({ isOpen: true, count: selectedQuotations.size });
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    try {
+      setBulkDeleting(true);
+      setBulkDeleteModal({ isOpen: false, count: 0 });
+      const totalQuotations = selectedQuotations.size;
+
+      // Initialize progress
+      setDeleteProgress({ current: 0, total: totalQuotations });
+
+      // Simulate progress for better UX (since deletion happens in one API call)
+      const progressInterval = setInterval(() => {
+        setDeleteProgress((prev) => {
+          if (prev.current < prev.total) {
+            return { ...prev, current: prev.current + 1 };
+          }
+          return prev;
+        });
+      }, 150); // Update every 150ms
+
+      await quotationsAPI.bulkDelete(Array.from(selectedQuotations));
+
+      // Clear interval and complete progress
+      clearInterval(progressInterval);
+      setDeleteProgress({ current: totalQuotations, total: totalQuotations });
+
+      // Small delay to show completion
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      setSelectedQuotations(new Set());
+      loadQuotations(); // Reload data
+    } catch (err) {
+      console.error("Failed to delete quotations:", err);
+    } finally {
+      setBulkDeleting(false);
+      setDeleteProgress({ current: 0, total: 0 });
     }
   };
 
-  const handleBulkExport = async () => {
+  const handleCancelBulkDelete = () => {
+    setBulkDeleteModal({ isOpen: false, count: 0 });
+  };
+
+  const handleBulkDownload = async () => {
     try {
-      const blob = await quotationsAPI.bulkExport(Array.from(selectedQuotations));
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `quotations-export-${new Date().toISOString().split("T")[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      setBulkDownloading(true);
+
+      // Get quotation info for bulk download
+      const response = await quotationsAPI.bulkDownload(Array.from(selectedQuotations));
+      const quotationsToDownload = response.data.quotations;
+
+      // Initialize progress
+      setDownloadProgress({ current: 0, total: quotationsToDownload.length });
+
+      // Download each quotation individually
+      for (let i = 0; i < quotationsToDownload.length; i++) {
+        const quotationInfo = quotationsToDownload[i];
+        try {
+          const blob = await quotationsAPI.downloadPDF(quotationInfo.id);
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `quotation_${quotationInfo.quotationNumber}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+
+          // Update progress after successful download
+          setDownloadProgress({ current: i + 1, total: quotationsToDownload.length });
+
+          // Add a small delay between downloads to avoid overwhelming the browser
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        } catch (downloadErr) {
+          console.error(`Failed to download quotation ${quotationInfo.quotationNumber}:`, downloadErr);
+          // Still update progress even if download failed
+          setDownloadProgress({ current: i + 1, total: quotationsToDownload.length });
+        }
+      }
+
+      // Clear selection after successful bulk download
+      setSelectedQuotations(new Set());
     } catch (err) {
-      console.error("Failed to export quotations:", err);
+      console.error("Failed to prepare bulk download:", err);
+    } finally {
+      setBulkDownloading(false);
+      setDownloadProgress({ current: 0, total: 0 });
     }
   };
 
@@ -372,14 +457,6 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Quotations</h1>
-          <p className="text-gray-600 mt-1">Manage and track all your moving quotations</p>
-        </div>
-      </div>
-
       {/* Search and Filters */}
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
         <div className="flex flex-col lg:flex-row gap-4">
@@ -395,67 +472,45 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
             />
           </div>
 
-          {/* View Toggle */}
-          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+          {/* Column Settings (only for desktop table view) */}
+          <div className="relative hidden 2xl:block">
             <button
-              onClick={() => setViewMode("list")}
-              className={`p-2 rounded-md transition-colors ${
-                viewMode === "list" ? "bg-white text-aces-green shadow-sm" : "text-gray-600 hover:text-gray-900"
-              }`}
+              onClick={() => setShowColumnSettings(!showColumnSettings)}
+              className="flex items-center space-x-2 px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
             >
-              <List size={18} />
+              <Settings size={16} />
+              <span>Columns</span>
             </button>
-            <button
-              onClick={() => setViewMode("table")}
-              className={`p-2 rounded-md transition-colors ${
-                viewMode === "table" ? "bg-white text-aces-green shadow-sm" : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              <Grid size={18} />
-            </button>
-          </div>
 
-          {/* Column Settings (only for table view) */}
-          {viewMode === "table" && (
-            <div className="relative">
-              <button
-                onClick={() => setShowColumnSettings(!showColumnSettings)}
-                className="flex items-center space-x-2 px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-              >
-                <Settings size={16} />
-                <span>Columns</span>
-              </button>
-
-              {showColumnSettings && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                  <div className="p-3">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Show Columns</h4>
-                    {[
-                      { key: "quotationNumber", label: "Quotation #" },
-                      { key: "type", label: "Type" },
-                      { key: "client", label: "Client" },
-                      { key: "status", label: "Status" },
-                      { key: "amount", label: "Amount" },
-                      { key: "validity", label: "Validity" },
-                      { key: "date", label: "Date" },
-                      { key: "createdBy", label: "Created By" },
-                      { key: "remaining", label: "Days Left" },
-                    ].map((column) => (
-                      <label key={column.key} className="flex items-center space-x-2 py-1">
-                        <input
-                          type="checkbox"
-                          checked={visibleColumns.has(column.key)}
-                          onChange={() => toggleColumnVisibility(column.key)}
-                          className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
-                        />
-                        <span className="text-sm text-gray-700">{column.label}</span>
-                      </label>
-                    ))}
-                  </div>
+            {showColumnSettings && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                <div className="p-3">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Show Columns</h4>
+                  {[
+                    { key: "quotationNumber", label: "Quotation #" },
+                    { key: "type", label: "Type" },
+                    { key: "client", label: "Client" },
+                    { key: "status", label: "Status" },
+                    { key: "amount", label: "Amount" },
+                    { key: "validity", label: "Validity" },
+                    { key: "date", label: "Date" },
+                    { key: "createdBy", label: "Created By" },
+                    { key: "remaining", label: "Days Left" },
+                  ].map((column) => (
+                    <label key={column.key} className="flex items-center space-x-2 py-1">
+                      <input
+                        type="checkbox"
+                        checked={visibleColumns.has(column.key)}
+                        onChange={() => toggleColumnVisibility(column.key)}
+                        className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
+                      />
+                      <span className="text-sm text-gray-700">{column.label}</span>
+                    </label>
+                  ))}
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* Filter Toggle */}
           <motion.button
@@ -532,31 +587,100 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-aces-green text-white rounded-lg p-4 flex items-center justify-between"
+          className="bg-aces-green text-white rounded-lg p-4"
         >
-          <span className="font-medium">
-            {selectedQuotations.size} quotation{selectedQuotations.size !== 1 ? "s" : ""} selected
-          </span>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleBulkExport}
-              className="px-3 py-1 bg-white/20 rounded text-sm hover:bg-white/30 transition-colors"
-            >
-              Export
-            </button>
-            <button
-              onClick={handleBulkDelete}
-              className="px-3 py-1 bg-red-500 rounded text-sm hover:bg-red-600 transition-colors"
-            >
-              Delete
-            </button>
-            <button
-              onClick={() => setSelectedQuotations(new Set())}
-              className="px-3 py-1 bg-white/20 rounded text-sm hover:bg-white/30 transition-colors"
-            >
-              Clear
-            </button>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-medium">
+              {selectedQuotations.size} quotation{selectedQuotations.size !== 1 ? "s" : ""} selected
+            </span>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleBulkDownload}
+                disabled={bulkDownloading || bulkDeleting}
+                className={`px-3 py-1 rounded text-sm transition-colors flex items-center space-x-1 ${
+                  bulkDownloading || bulkDeleting
+                    ? "bg-white/10 cursor-not-allowed text-white/70"
+                    : "bg-white/20 hover:bg-white/30"
+                }`}
+              >
+                {bulkDownloading && <Loader2 size={14} className="animate-spin" />}
+                <span>{bulkDownloading ? "Downloading..." : "Download"}</span>
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDownloading || bulkDeleting}
+                  className={`px-3 py-1 rounded text-sm transition-colors flex items-center space-x-1 ${
+                    bulkDownloading || bulkDeleting ? "bg-red-400 cursor-not-allowed" : "bg-red-500 hover:bg-red-600"
+                  }`}
+                >
+                  {bulkDeleting && <Loader2 size={14} className="animate-spin" />}
+                  <span>{bulkDeleting ? "Deleting..." : "Delete"}</span>
+                </button>
+              )}
+              <button
+                onClick={() => setSelectedQuotations(new Set())}
+                disabled={bulkDownloading || bulkDeleting}
+                className={`px-3 py-1 rounded text-sm transition-colors ${
+                  bulkDownloading || bulkDeleting
+                    ? "bg-white/10 cursor-not-allowed text-white/70"
+                    : "bg-white/20 hover:bg-white/30"
+                }`}
+              >
+                Clear
+              </button>
+            </div>
           </div>
+
+          {/* Progress Bars */}
+          {(bulkDownloading || bulkDeleting) && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-2"
+            >
+              {bulkDownloading && downloadProgress.total > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Downloading quotations...</span>
+                    <span>
+                      {downloadProgress.current} of {downloadProgress.total}
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden">
+                    <motion.div
+                      className="bg-white h-2.5 rounded-full transition-all duration-300 ease-out"
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: `${(downloadProgress.current / downloadProgress.total) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              {bulkDeleting && deleteProgress.total > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Deleting quotations...</span>
+                    <span>
+                      {deleteProgress.current} of {deleteProgress.total}
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden">
+                    <motion.div
+                      className="bg-white h-2.5 rounded-full transition-all duration-300 ease-out"
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: `${(deleteProgress.current / deleteProgress.total) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
         </motion.div>
       )}
 
@@ -579,11 +703,12 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
               : "Get started by creating your first quotation."}
           </p>
         </div>
-      ) : viewMode === "table" ? (
-        /* Table View */
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+      ) : (
+        <>
+          {/* Desktop Table View (>1200px) */}
+          <div className="hidden 2xl:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="w-12 px-4 py-3">
@@ -719,15 +844,7 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
                     )}
                     {visibleColumns.has("createdBy") && (
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        <div className="flex items-center space-x-2">
-                          <User size={14} className="text-blue-500" />
-                          <div>
-                            <div className="font-medium text-gray-900">{quotation.createdBy.fullName}</div>
-                            {quotation.createdBy.email && (
-                              <div className="text-xs text-gray-500">{quotation.createdBy.email}</div>
-                            )}
-                          </div>
-                        </div>
+                        <div className="font-medium text-gray-900">{quotation.createdBy.fullName}</div>
                       </td>
                     )}
                     {visibleColumns.has("remaining") && (
@@ -755,7 +872,10 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
                           <Eye size={14} />
                         </button>
                         <button
-                          onClick={() => navigate(`/create?type=quotation&edit=${quotation._id}`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/quotations/edit/${quotation._id}`);
+                          }}
                           className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                           title="Edit"
                         >
@@ -790,16 +910,19 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
                             >
                               <RotateCcw size={14} />
                             </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleConvertToReceipt(quotation);
-                              }}
-                              className="p-1 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
-                              title="Convert to Receipt"
-                            >
-                              <Receipt size={14} />
-                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeletingQuotation(quotation);
+                                  setShowDeleteModal(true);
+                                }}
+                                className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                title="Delete Quotation"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -810,177 +933,223 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
             </table>
           </div>
         </div>
-      ) : (
-        /* Card View */
-        <div className="space-y-4">
+
+        {/* Mobile/Tablet Card View (≤1200px) */}
+        <div className="block 2xl:hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {quotations.map((quotation, index) => (
             <motion.div
               key={quotation._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className={`bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all cursor-pointer ${
+              className={`bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-all cursor-pointer overflow-hidden group ${
                 selectedQuotations.has(quotation._id) ? "ring-2 ring-aces-green border-aces-green" : ""
               }`}
               onClick={() => handleViewQuotation(quotation)}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedQuotations.has(quotation._id)}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleSelectQuotation(quotation._id, e.target.checked);
-                    }}
-                    className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4 mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900">{quotation.quotationNumber}</h3>
-                      <span
-                        className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                          quotation.validity.status
-                        )}`}
-                      >
-                        {getStatusIcon(quotation.validity.status)}
-                        <span className="capitalize">{quotation.validity.status}</span>
+              {/* Card Header */}
+              <div className="p-5 pb-0">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedQuotations.has(quotation._id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleSelectQuotation(quotation._id, e.target.checked);
+                      }}
+                      className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <div className="flex items-center space-x-2">
+                      {getQuotationTypeIcon(quotation.type)}
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                        {quotation.type}
                       </span>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{quotation.type}</span>
                     </div>
+                  </div>
+                  <span
+                    className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
+                      quotation.validity.status
+                    )}`}
+                  >
+                    {getStatusIcon(quotation.validity.status)}
+                    <span className="capitalize">{quotation.validity.status}</span>
+                  </span>
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-600">
-                      <div className="flex items-center space-x-2">
-                        <User size={14} />
-                        <div>
-                          <div className="font-medium text-gray-900">{quotation.client.name}</div>
-                          {quotation.client.company && (
-                            <div className="text-xs text-gray-500">{quotation.client.company}</div>
-                          )}
-                        </div>
-                      </div>
+                {/* Quotation Number */}
+                <div className="mb-3">
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">{quotation.quotationNumber}</h3>
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <Calendar size={14} />
+                    <span>Created {formatDate(quotation.createdAt)}</span>
+                  </div>
+                </div>
+              </div>
 
-                      <div className="flex items-center space-x-2">
-                        <Calendar size={14} />
-                        <span>{formatDate(quotation.locations.movingDate)}</span>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <DollarSign size={14} />
-                        <span className="font-medium">
-                          {formatCurrency(quotation.pricing.totalAmount, quotation.pricing.currency)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Clock size={14} />
-                        <span>{formatRemainingDays(quotation)}</span>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <User size={14} className="text-blue-500" />
-                        <div>
-                          <div className="font-medium text-gray-900">{quotation.createdBy.fullName}</div>
-                          <div className="text-xs text-gray-500">Created by</div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Calendar size={14} className="text-gray-400" />
-                        <div>
-                          <div className="font-medium text-gray-900">{formatDate(quotation.createdAt)}</div>
-                          <div className="text-xs text-gray-500">Created on</div>
-                        </div>
+              {/* Card Body */}
+              <div className="px-5 pb-4">
+                {/* Client Information */}
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 truncate">{quotation.client.name}</h4>
+                      {quotation.client.company && (
+                        <p className="text-sm text-gray-600 truncate">{quotation.client.company}</p>
+                      )}
+                      <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500">
+                        <Calendar size={12} />
+                        <span>Move: {formatDate(quotation.locations.movingDate)}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex items-center space-x-2 ml-4">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleViewQuotation(quotation);
-                    }}
-                    className="p-2 text-gray-600 hover:text-aces-green hover:bg-gray-100 rounded-lg transition-colors"
-                    title="View Details"
-                  >
-                    <Eye size={16} />
-                  </motion.button>
+                {/* Financial & Timeline Info */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-green-50 rounded-lg p-3 text-center">
+                    <div className="text-lg font-bold text-green-700">
+                      {formatCurrency(quotation.pricing.totalAmount, quotation.pricing.currency)}
+                    </div>
+                    <div className="text-xs text-green-600">Total Amount</div>
+                  </div>
 
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/create?type=quotation&edit=${quotation._id}`);
-                    }}
-                    className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Edit"
-                  >
-                    <Edit size={16} />
-                  </motion.button>
-
-                  <motion.button
-                    whileHover={{ scale: downloadingIds.has(quotation._id) ? 1 : 1.1 }}
-                    whileTap={{ scale: downloadingIds.has(quotation._id) ? 1 : 0.9 }}
-                    onClick={(e) => handleDownloadPDF(quotation, e)}
-                    disabled={downloadingIds.has(quotation._id)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      downloadingIds.has(quotation._id)
-                        ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                        : "text-gray-600 hover:text-green-600 hover:bg-green-50"
+                  <div
+                    className={`rounded-lg p-3 text-center ${
+                      calculateRemainingDays(quotation) < 0
+                        ? "bg-red-50"
+                        : calculateRemainingDays(quotation) < 7
+                        ? "bg-yellow-50"
+                        : "bg-blue-50"
                     }`}
-                    title={downloadingIds.has(quotation._id) ? "Downloading..." : "Download PDF"}
                   >
-                    {downloadingIds.has(quotation._id) ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Download size={16} />
-                    )}
-                  </motion.button>
+                    <div
+                      className={`text-sm font-bold ${
+                        calculateRemainingDays(quotation) < 0
+                          ? "text-red-700"
+                          : calculateRemainingDays(quotation) < 7
+                          ? "text-yellow-700"
+                          : "text-blue-700"
+                      }`}
+                    >
+                      {formatRemainingDays(quotation)}
+                    </div>
+                    <div
+                      className={`text-xs ${
+                        calculateRemainingDays(quotation) < 0
+                          ? "text-red-600"
+                          : calculateRemainingDays(quotation) < 7
+                          ? "text-yellow-600"
+                          : "text-blue-600"
+                      }`}
+                    >
+                      Validity
+                    </div>
+                  </div>
+                </div>
 
-                  {/* Extend Validity Button - only for active quotations */}
-                  {quotation.validity.status === "active" && (
+                {/* Creator Info */}
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center space-x-2 text-gray-600">
+                    <span>By {quotation.createdBy.fullName}</span>
+                  </div>
+                  <div className="text-gray-500">{formatDate(quotation.validity.validUntil)}</div>
+                </div>
+              </div>
+
+              {/* Card Footer - Actions */}
+              <div className="border-t border-gray-100 px-5 py-3 bg-gray-50 group-hover:bg-gray-100 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setExtendingQuotation(quotation);
-                        setShowExtendModal(true);
+                        handleViewQuotation(quotation);
                       }}
-                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Extend Validity"
+                      className="p-2 text-gray-600 hover:text-aces-green hover:bg-white rounded-lg transition-colors shadow-sm"
+                      title="View Details"
                     >
-                      <RotateCcw size={16} />
+                      <Eye size={16} />
                     </motion.button>
-                  )}
 
-                  {/* Convert to Receipt Button - only for active quotations */}
-                  {quotation.validity.status === "active" && (
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleConvertToReceipt(quotation);
+                        navigate(`/quotations/edit/${quotation._id}`);
                       }}
-                      className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                      title="Convert to Receipt"
+                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-white rounded-lg transition-colors shadow-sm"
+                      title="Edit"
                     >
-                      <Receipt size={16} />
+                      <Edit size={16} />
                     </motion.button>
+
+                    <motion.button
+                      whileHover={{ scale: downloadingIds.has(quotation._id) ? 1 : 1.1 }}
+                      whileTap={{ scale: downloadingIds.has(quotation._id) ? 1 : 0.9 }}
+                      onClick={(e) => handleDownloadPDF(quotation, e)}
+                      disabled={downloadingIds.has(quotation._id)}
+                      className={`p-2 rounded-lg transition-colors shadow-sm ${
+                        downloadingIds.has(quotation._id)
+                          ? "text-gray-400 bg-gray-200 cursor-not-allowed"
+                          : "text-gray-600 hover:text-green-600 hover:bg-white"
+                      }`}
+                      title={downloadingIds.has(quotation._id) ? "Downloading..." : "Download PDF"}
+                    >
+                      {downloadingIds.has(quotation._id) ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Download size={16} />
+                      )}
+                    </motion.button>
+                  </div>
+
+                  {/* Additional Actions - only for active quotations */}
+                  {quotation.validity.status === "active" && (
+                    <div className="flex items-center space-x-2">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExtendingQuotation(quotation);
+                          setShowExtendModal(true);
+                        }}
+                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-white rounded-lg transition-colors shadow-sm"
+                        title="Extend Validity"
+                      >
+                        <RotateCcw size={16} />
+                      </motion.button>
+
+                      {isAdmin && (
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingQuotation(quotation);
+                            setShowDeleteModal(true);
+                          }}
+                          className="p-2 text-red-600 hover:text-red-700 hover:bg-white rounded-lg transition-colors shadow-sm"
+                          title="Delete Quotation"
+                        >
+                          <Trash2 size={16} />
+                        </motion.button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
             </motion.div>
           ))}
+          </div>
         </div>
+        </>
       )}
 
       {/* Pagination */}
@@ -1070,69 +1239,161 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
                   setExtendDays(30);
                   setExtendReason("");
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                disabled={isExtending}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleExtendValidity}
-                disabled={!extendReason.trim()}
-                className="px-4 py-2 bg-aces-green text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                disabled={!extendReason.trim() || isExtending}
+                className="px-4 py-2 bg-aces-green text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
               >
-                Extend Validity
+                {isExtending && <Loader2 size={16} className="animate-spin" />}
+                <span>{isExtending ? "Extending..." : "Extend Validity"}</span>
               </button>
             </div>
           </motion.div>
         </div>
       )}
 
-      {/* Convert to Receipt Modal */}
-      {showConvertModal && convertingQuotation && (
+      {/* Delete Quotation Modal */}
+      {showDeleteModal && deletingQuotation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-xl p-6 w-full max-w-md mx-4"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Convert to Receipt</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Quotation</h3>
 
             <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-red-50 rounded-lg p-4">
                 <div className="text-sm">
-                  <div className="font-medium text-gray-900">{convertingQuotation.quotationNumber}</div>
+                  <div className="font-medium text-gray-900">{deletingQuotation.quotationNumber}</div>
                   <div className="text-gray-600">
-                    {convertingQuotation.client.name} -{" "}
-                    {formatCurrency(convertingQuotation.pricing.totalAmount, convertingQuotation.pricing.currency)}
+                    {deletingQuotation.client.name} -{" "}
+                    {formatCurrency(deletingQuotation.pricing.totalAmount, deletingQuotation.pricing.currency)}
                   </div>
                 </div>
               </div>
 
               <p className="text-sm text-gray-600">
-                This will create a new receipt based on this quotation. The quotation will be marked as converted and
-                cannot be modified.
+                Are you sure you want to delete this quotation? This action cannot be undone.
               </p>
             </div>
 
             <div className="flex items-center justify-end space-x-3 mt-6">
               <button
                 onClick={() => {
-                  setShowConvertModal(false);
-                  setConvertingQuotation(null);
+                  setShowDeleteModal(false);
+                  setDeletingQuotation(null);
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                disabled={isDeleting}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={confirmConvertToReceipt}
-                className="px-4 py-2 bg-aces-green text-white rounded-lg hover:bg-green-700 transition-colors"
+                onClick={handleDeleteQuotation}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
               >
-                Create Receipt
+                {isDeleting && <Loader2 size={16} className="animate-spin" />}
+                <span>{isDeleting ? "Deleting..." : "Delete"}</span>
               </button>
             </div>
           </motion.div>
         </div>
       )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      <AnimatePresence>
+        {bulkDeleteModal.isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={handleCancelBulkDelete}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 w-full max-w-md mx-auto shadow-xl"
+            >
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100">
+                    <div className="p-2 bg-red-500 rounded-full">
+                      <FileText className="w-5 h-5 text-white" />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-1 bg-red-100 rounded">
+                      <Trash2 className="w-5 h-5 text-red-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {bulkDeleteModal.count} Quotation{bulkDeleteModal.count !== 1 ? "s" : ""} Selected
+                    </div>
+                    <div className="text-xs text-gray-500">All selected quotations will be permanently deleted</div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-gray-700 mt-4">
+                Are you sure you want to permanently delete <strong>{bulkDeleteModal.count}</strong> selected quotation
+                {bulkDeleteModal.count !== 1 ? "s" : ""}? This will completely remove{" "}
+                {bulkDeleteModal.count !== 1 ? "these quotations" : "this quotation"} and all associated data from the
+                system.
+              </p>
+
+              {/* Warning for bulk delete */}
+              {bulkDeleteModal.count > 5 && (
+                <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                    <p className="text-xs text-yellow-800">
+                      You're about to delete a large number of quotations. This operation may take a moment.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={handleCancelBulkDelete}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmBulkDelete}
+                  disabled={bulkDeleting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {bulkDeleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                      Deleting...
+                    </>
+                  ) : (
+                    `Delete ${bulkDeleteModal.count} Quotation${bulkDeleteModal.count !== 1 ? "s" : ""}`
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

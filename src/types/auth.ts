@@ -3,12 +3,26 @@ export interface User {
   email: string;
   fullName: string;
   role: 'admin' | 'member' | 'user';
-  status: 'active' | 'suspended';
+  status: 'active' | 'inactive' | 'suspended';
   phonePrimary?: string;
+  phoneSecondary?: string;
+  address?: string;
+  emergencyContact?: string;
+  profilePhoto?: {
+    url: string;
+    originalName?: string;
+    publicId?: string;
+    uploadedAt?: string;
+  };
   profileCompleted: boolean;
+  profileCompletionStatus?: {
+    isComplete: boolean;
+    missingFields: string[];
+  };
   createdAt: string;
   updatedAt: string;
   lastLogin?: string;
+  createdBy?: string;
 }
 
 export interface LoginCredentials {

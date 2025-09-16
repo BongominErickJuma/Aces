@@ -79,6 +79,37 @@ export const tokenManager = {
 };
 
 // Authentication API
+// Signature API
+export const signatureApi = {
+  saveSignature: async (data: { type: 'canvas' | 'upload'; data: string }) => {
+    const response = await api.post('/signatures/save', data);
+    return response.data;
+  },
+
+  uploadSignature: async (file: File) => {
+    const formData = new FormData();
+    formData.append('signature', file);
+
+    const response = await api.post('/signatures/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  getSignature: async () => {
+    const response = await api.get('/signatures/me');
+    return response.data;
+  },
+
+  deleteSignature: async () => {
+    const response = await api.delete('/signatures/me');
+    return response.data;
+  },
+};
+
+// Authentication API
 export const authAPI = {
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
     try {

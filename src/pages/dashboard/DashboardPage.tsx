@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FileText, Receipt, Globe, Building, Home, Users, DollarSign, RefreshCw, Download, Bell } from "lucide-react";
+import { FileText, Receipt, Globe, Building, Home, RefreshCw } from "lucide-react";
 import { PageLayout } from "../../components/layout";
 import StatsCard from "../../components/dashboard/StatsCard";
 import RecentDocuments from "../../components/dashboard/RecentDocuments";
 import { dashboardAPI } from "../../services/dashboard";
+import { receiptsAPI } from "../../services/receipts";
+import { quotationsAPI } from "../../services/quotations";
 import { useAuth } from "../../context/AuthContext";
 import type { DashboardStats, Period } from "../../types/dashboard";
 
@@ -54,11 +56,11 @@ const DashboardPage: React.FC = () => {
 
     try {
       // Add to downloading set
-      setDownloadingIds(prev => new Set(prev).add(id));
+      setDownloadingIds((prev) => new Set(prev).add(id));
 
       const { api } = await import("../../services/api");
       const endpoint = type === "quotation" ? "quotations" : "receipts";
-      
+
       const response = await api.get(`/${endpoint}/${id}/download`, {
         responseType: "blob",
       });
@@ -67,16 +69,16 @@ const DashboardPage: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      
+
       // Get document number for filename (will be available from the doc in stats)
-      const docData = type === "quotation" 
-        ? stats?.recentActivity.quotations.find(q => q._id === id)
-        : stats?.recentActivity.receipts.find(r => r._id === id);
-      
-      const documentNumber = type === "quotation" 
-        ? (docData as any)?.quotationNumber || id
-        : (docData as any)?.receiptNumber || id;
-        
+      const docData =
+        type === "quotation"
+          ? stats?.recentActivity.quotations.find((q) => q._id === id)
+          : stats?.recentActivity.receipts.find((r) => r._id === id);
+
+      const documentNumber =
+        type === "quotation" ? (docData as any)?.quotationNumber || id : (docData as any)?.receiptNumber || id;
+
       link.download = `${type}-${documentNumber}.pdf`;
       document.body.appendChild(link);
       link.click();
@@ -86,7 +88,7 @@ const DashboardPage: React.FC = () => {
       console.error("Download error:", error);
     } finally {
       // Remove from downloading set
-      setDownloadingIds(prev => {
+      setDownloadingIds((prev) => {
         const newSet = new Set(prev);
         newSet.delete(id);
         return newSet;
@@ -100,70 +102,31 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleDeleteDocument = async (type: "quotation" | "receipt", id: string) => {
-    if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
+    const documentName = type === "quotation" ? "quotation" : "receipt";
+    if (!confirm(`Are you sure you want to delete this ${documentName}? This action cannot be undone.`)) return;
+
     try {
-      // TODO: Implement delete functionality
-      console.log(`Deleting ${type} ${id}`);
+      if (type === "receipt") {
+        await receiptsAPI.deleteReceipt(id);
+      } else {
+        await quotationsAPI.deleteQuotation(id);
+      }
+
+      // Refresh the dashboard data after successful deletion
       handleRefresh();
     } catch (error) {
       console.error("Delete error:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : `Failed to delete ${documentName}. ${type === "receipt" ? "Admin privileges required." : ""}`
+      );
     }
-  };
-
-  const handleExportData = () => {
-    // TODO: Implement CSV/Excel export
-    console.log("Exporting dashboard data...");
   };
 
   return (
     <PageLayout title="Dashboard">
       <div className="space-y-6">
-        {/* Header Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-        >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user?.fullName}!</h1>
-              <p className="text-gray-600 mt-1">Here's an overview of your document management system</p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {/* Period Selector */}
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value as Period)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
-                <option value="1y">Last year</option>
-              </select>
-
-              {/* Refresh Button */}
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-              >
-                <RefreshCw className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`} />
-              </button>
-
-              {/* Export Button */}
-              <button
-                onClick={handleExportData}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </button>
-            </div>
-          </div>
-        </motion.div>
-
         {/* Error Message */}
         {error && (
           <motion.div
@@ -215,46 +178,6 @@ const DashboardPage: React.FC = () => {
             loading={loading}
           />
         </div>
-
-        {/* Additional Stats for Admin */}
-        {isAdmin && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatsCard
-              title="Total Users"
-              value={stats?.overview.totalUsers.count || 0}
-              change={stats?.overview.totalUsers.change}
-              icon={Users}
-              color="blue"
-              loading={loading}
-            />
-            <StatsCard
-              title="Active Users"
-              value={stats?.overview.totalUsers.active || 0}
-              icon={Users}
-              color="green"
-              loading={loading}
-            />
-            <StatsCard
-              title="Total Revenue"
-              value={
-                stats?.overview.revenue.total
-                  ? `${stats.overview.revenue.currency} ${stats.overview.revenue.total.toLocaleString()}`
-                  : "0"
-              }
-              change={stats?.overview.revenue.change}
-              icon={DollarSign}
-              color="purple"
-              loading={loading}
-            />
-            <StatsCard
-              title="Unread Notifications"
-              value={stats?.overview.notifications.unread || 0}
-              icon={Bell}
-              color="orange"
-              loading={loading}
-            />
-          </div>
-        )}
 
         {/* Recent Documents Section */}
         <RecentDocuments

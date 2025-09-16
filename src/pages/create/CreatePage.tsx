@@ -1,18 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { 
-  FileText, 
-  Receipt, 
-  UserPlus, 
-  Plus, 
-  CheckCircle, 
-  AlertTriangle,
-  Loader2 
-} from "lucide-react";
+import { FileText, Receipt, UserPlus, AlertTriangle, Loader2 } from "lucide-react";
 import { PageLayout } from "../../components/layout";
 import { useAuth } from "../../context/AuthContext";
-import { Button } from "../../components/ui/Button";
 import QuotationCreateForm from "./components/QuotationCreateForm";
 import ReceiptCreateForm from "./components/ReceiptCreateForm";
 import UserCreateForm from "./components/UserCreateForm";
@@ -59,16 +50,16 @@ const CreatePage: React.FC = () => {
   ];
 
   // Filter tabs based on user role
-  const availableTabs = tabs.filter(tab => !tab.adminOnly || isAdmin);
+  const availableTabs = tabs.filter((tab) => !tab.adminOnly || isAdmin);
 
   // Initialize tab from URL params or default
   useEffect(() => {
     const tabParam = searchParams.get("type") as CreateType;
     const fromQuotation = searchParams.get("fromQuotation");
-    
+
     if (fromQuotation) {
       setActiveTab("receipt");
-    } else if (tabParam && availableTabs.some(tab => tab.id === tabParam)) {
+    } else if (tabParam && availableTabs.some((tab) => tab.id === tabParam)) {
       setActiveTab(tabParam);
     } else {
       setActiveTab("quotation");
@@ -79,21 +70,6 @@ const CreatePage: React.FC = () => {
   const handleTabChange = (tabId: CreateType) => {
     setActiveTab(tabId);
     setSearchParams({ type: tabId });
-  };
-
-  const handleSuccess = (type: CreateType, data: any) => {
-    // Navigate to the appropriate page after successful creation
-    switch (type) {
-      case "quotation":
-        navigate(`/quotations/${data._id}`);
-        break;
-      case "receipt":
-        navigate(`/receipts/${data._id}`);
-        break;
-      case "user":
-        navigate("/admin");
-        break;
-    }
   };
 
   const handleCancel = () => {
@@ -118,98 +94,40 @@ const CreatePage: React.FC = () => {
 
     switch (activeTab) {
       case "quotation":
-        return (
-          <QuotationCreateForm
-            onSuccess={(data) => handleSuccess("quotation", data)}
-            onCancel={handleCancel}
-            isLoading={isLoading}
-            setIsLoading={setIsLoading}
-          />
-        );
-      
+        return <QuotationCreateForm onCancel={handleCancel} isLoading={isLoading} setIsLoading={setIsLoading} />;
+
       case "receipt":
         return (
           <ReceiptCreateForm
-            onSuccess={(data) => handleSuccess("receipt", data)}
             onCancel={handleCancel}
             isLoading={isLoading}
             setIsLoading={setIsLoading}
             fromQuotationId={fromQuotationId}
           />
         );
-      
+
       case "user":
         if (!isAdmin) {
           return (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-12"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
               <AlertTriangle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Access Restricted
-              </h3>
-              <p className="text-gray-600">
-                Only administrators can create new user accounts.
-              </p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
+              <p className="text-gray-600">Only administrators can create new user accounts.</p>
             </motion.div>
           );
         }
-        return (
-          <UserCreateForm
-            onSuccess={(data) => handleSuccess("user", data)}
-            onCancel={handleCancel}
-            isLoading={isLoading}
-            setIsLoading={setIsLoading}
-          />
-        );
-      
+        return <UserCreateForm onCancel={handleCancel} isLoading={isLoading} setIsLoading={setIsLoading} />;
+
       default:
         return null;
     }
   };
 
-  const currentTab = availableTabs.find(tab => tab.id === activeTab);
+  const currentTab = availableTabs.find((tab) => tab.id === activeTab);
 
   return (
     <PageLayout title="Create">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-        >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="p-2 bg-aces-green/10 rounded-lg">
-                  <Plus className="w-6 h-6 text-aces-green" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Create New</h1>
-                  <p className="text-gray-600">
-                    {currentTab?.description || "Choose what you'd like to create"}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Quick Actions */}
-            <div className="flex items-center space-x-2">
-              <Button
-                onClick={handleCancel}
-                variant="secondary"
-                size="sm"
-                className="flex items-center space-x-2"
-              >
-                <span>Cancel</span>
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-
+      <div className="mx-auto space-y-6">
         {/* Tab Navigation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -222,7 +140,7 @@ const CreatePage: React.FC = () => {
               {availableTabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
-                
+
                 return (
                   <motion.button
                     key={tab.id}
@@ -281,12 +199,8 @@ const CreatePage: React.FC = () => {
               >
                 <Loader2 className="w-8 h-8 text-aces-green animate-spin" />
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Creating {currentTab?.label}...
-                  </h3>
-                  <p className="text-gray-600 text-sm mt-1">
-                    Please wait while we process your request
-                  </p>
+                  <h3 className="text-lg font-semibold text-gray-900">Creating {currentTab?.label}...</h3>
+                  <p className="text-gray-600 text-sm mt-1">Please wait while we process your request</p>
                 </div>
               </motion.div>
             </motion.div>

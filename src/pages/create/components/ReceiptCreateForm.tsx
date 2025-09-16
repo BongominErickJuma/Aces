@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import {
-  Save,
-  X,
-  Plus,
   Trash2,
   Calculator,
   AlertCircle,
@@ -12,34 +10,34 @@ import {
   FileText,
   CheckCircle,
   CreditCard,
-  Calendar,
   User,
   MapPin,
-  DollarSign,
-  Search,
   ExternalLink,
+  Notebook,
 } from "lucide-react";
-import { receiptsAPI, type CreateReceiptData, type Receipt } from "../../../services/receipts";
+import { receiptsAPI, type CreateReceiptData } from "../../../services/receipts";
 import { quotationsAPI, type Quotation } from "../../../services/quotations";
 import { Button } from "../../../components/ui/Button";
 
 interface ReceiptCreateFormProps {
-  onSuccess: (receipt: Receipt) => void;
   onCancel: () => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   fromQuotationId?: string | null;
 }
 
-interface FormData extends CreateReceiptData {}
+interface FormData extends CreateReceiptData {
+  commitmentFeePaid?: number;
+  totalMovingAmount?: number;
+}
 
 const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
-  onSuccess,
   onCancel,
   isLoading,
   setIsLoading,
   fromQuotationId,
 }) => {
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -67,25 +65,18 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
       locations: {
         from: "",
         to: "",
-        movingDate: "",
+        movingDate: new Date().toISOString().split("T")[0],
       },
       services: [
         {
-          description: "",
+          description: "Standard service",
           amount: 0,
           quantity: 1,
         },
       ],
       payment: {
         currency: "UGX",
-        method: "cash",
-        dueDate: "",
-      },
-      signatures: {
-        receivedBy: "",
-        receivedByTitle: "",
-        clientName: "",
-        signatureDate: new Date().toISOString().split("T")[0],
+        method: "mobile_money",
       },
       notes: "",
     },
@@ -99,7 +90,6 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
   const watchedServices = watch("services");
   const watchedCurrency = watch("payment.currency");
   const receiptType = watch("receiptType");
-  const selectedQuotationId = watch("quotationId");
 
   // Load quotation data if coming from quotation
   useEffect(() => {
@@ -115,7 +105,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
 
       // Pre-fill form with quotation data
       setValue("quotationId", quotationId);
-      setValue("receiptType", quotation.type === "International" ? "international" : "box");
+      setValue("receiptType", "commitment"); // Default when creating from quotation
       setValue("client.name", quotation.client.name);
       setValue("client.phone", quotation.client.phone);
       setValue("client.email", quotation.client.email || "");
@@ -163,19 +153,81 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
   const totalAmount = watchedServices?.reduce((sum, service) => sum + (service.quantity * service.amount || 0), 0) || 0;
 
   const onSubmit = async (data: FormData) => {
+    // Prevent submission if not on the final step
+    if (currentStep !== 4) {
+      console.warn("Form submitted but not on step 4, current step:", currentStep);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
 
-      const receiptData = {
-        ...data,
-        totalAmount,
+      let receiptData: any = {
+        receiptType: data.receiptType,
+        quotationId: data.quotationId || undefined,
+        client: {
+          name: data.client.name,
+          phone: data.client.phone,
+          email: data.client.email || undefined,
+          address: data.client.address || undefined,
+        },
+        locations:
+          data.locations.from || data.locations.to || data.locations.movingDate
+            ? {
+                from: data.locations.from || undefined,
+                to: data.locations.to || undefined,
+                movingDate: data.locations.movingDate || undefined,
+              }
+            : undefined,
+        payment: {
+          currency: data.payment.currency,
+          method: data.payment.method || undefined,
+          dueDate: data.payment.dueDate || undefined,
+        },
+        notes: data.notes || undefined,
       };
 
+      // Handle commitment receipts specially
+      if (data.receiptType === "commitment") {
+        // Add commitment-specific fields
+        receiptData.commitmentFeePaid = Number(data.commitmentFeePaid) || 0;
+        receiptData.totalMovingAmount = Number(data.totalMovingAmount) || 0;
+        // Backend will generate the 3 service items automatically
+      } else {
+        // Include total field for services - backend validation requires it
+        const services = data.services.map((service) => ({
+          description: service.description,
+          quantity: Number(service.quantity),
+          amount: Number(service.amount),
+          total: Number(service.quantity) * Number(service.amount),
+        }));
+        receiptData.services = services;
+      }
+
       const response = await receiptsAPI.createReceipt(receiptData);
-      onSuccess(response.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create receipt");
+      // Navigate to receipts list after successful creation
+      navigate("/receipts", {
+        state: { message: `Receipt ${response.data.receipt.receiptNumber} created successfully` },
+      });
+    } catch (err: any) {
+      console.error("Receipt creation error:", err);
+      console.error("Error response:", err.response?.data);
+
+      // Better error messages
+      let errorMessage = "Failed to create receipt";
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error?.details) {
+        const details = err.response.data.error.details;
+        errorMessage = Array.isArray(details)
+          ? details.map((d: any) => d.msg || d.message).join(", ")
+          : details.reason || details.message || errorMessage;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -183,7 +235,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
 
   const addService = () => {
     append({
-      description: "",
+      description: "Service description",
       quantity: 1,
       amount: 0,
     });
@@ -290,81 +342,15 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
               <h3 className="text-lg font-semibold text-gray-900">Receipt Type</h3>
             </div>
 
-            {/* Create from Quotation Option */}
-            {!fromQuotationId && (
-              <div className="bg-blue-50 rounded-lg p-6 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-md font-semibold text-blue-900">Create from Quotation</h4>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setShowQuotationSelect(!showQuotationSelect);
-                      if (!showQuotationSelect) loadAvailableQuotations();
-                    }}
-                    variant="secondary"
-                    size="sm"
-                    disabled={loadingQuotations}
-                  >
-                    <Search className="w-4 h-4 mr-2" />
-                    {showQuotationSelect ? "Hide" : "Browse"} Quotations
-                  </Button>
-                </div>
-
-                {showQuotationSelect && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="space-y-2"
-                  >
-                    {loadingQuotations ? (
-                      <div className="text-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                        <p className="text-sm text-blue-600 mt-2">Loading quotations...</p>
-                      </div>
-                    ) : quotations.length > 0 ? (
-                      <div className="max-h-40 overflow-y-auto space-y-2">
-                        {quotations.map((quotation) => (
-                          <button
-                            key={quotation._id}
-                            type="button"
-                            onClick={() => loadQuotationData(quotation._id)}
-                            className="w-full text-left p-3 bg-white rounded border hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <div className="font-medium text-gray-900">{quotation.quotationNumber}</div>
-                                <div className="text-sm text-gray-600">
-                                  {quotation.client.name} • {quotation.type}
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-medium text-aces-green">
-                                  {formatCurrency(quotation.pricing.totalAmount)}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {new Date(quotation.createdAt).toLocaleDateString()}
-                                </div>
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-blue-600 text-sm">No active quotations found.</p>
-                    )}
-                  </motion.div>
-                )}
-              </div>
-            )}
-
             {/* Receipt Type Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Receipt Type *</label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
                   { value: "box", label: "Box Receipt", description: "Standard moving box receipt" },
-                  { value: "office", label: "Office Receipt", description: "Office moving receipt" },
-                  { value: "international", label: "International", description: "International moving receipt" },
+                  { value: "commitment", label: "Commitment", description: "Commitment fee receipt" },
+                  { value: "final", label: "Final", description: "Final payment receipt" },
+                  { value: "one_time", label: "One Time", description: "Single payment receipt" },
                 ].map((type) => (
                   <label key={type.value} className="relative">
                     <input
@@ -480,6 +466,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                 <input
                   type="date"
                   {...register("locations.movingDate", { required: "Moving date is required" })}
+                  defaultValue={new Date().toISOString().split("T")[0]}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
                 />
                 {errors.locations?.movingDate && (
@@ -501,113 +488,215 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
                 <Package className="w-5 h-5 text-aces-green" />
-                <h3 className="text-lg font-semibold text-gray-900">Services</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {receiptType === "commitment" ? "Commitment Receipt Details" : "Services"}
+                </h3>
               </div>
-              <Button
-                type="button"
-                onClick={addService}
-                variant="secondary"
-                size="sm"
-                className="flex items-center space-x-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Service</span>
-              </Button>
+              {receiptType !== "commitment" && (
+                <Button
+                  type="button"
+                  onClick={addService}
+                  variant="secondary"
+                  size="sm"
+                  className="flex items-center space-x-2"
+                >
+                  <span>Add Service</span>
+                </Button>
+              )}
             </div>
 
-            <div className="space-y-4">
-              {fields.map((field, index) => (
-                <motion.div
-                  key={field.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-gray-50 rounded-lg p-6 relative"
-                >
-                  {fields.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => remove(index)}
-                      className="absolute top-4 right-4 p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+            {/* Commitment Receipt - Special Fields */}
+            {receiptType === "commitment" ? (
+              <div className="space-y-4">
+                <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
+                  <h4 className="text-md font-semibold text-gray-900 mb-4">Commitment Fee Information</h4>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Service Description *</label>
-                      <textarea
-                        {...register(`services.${index}.description`, {
-                          required: "Service description is required",
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Commitment Fee Paid ({watchedCurrency}) *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        {...register("commitmentFeePaid", {
+                          required: "Commitment fee is required",
+                          min: { value: 0, message: "Amount must be positive" },
                         })}
-                        rows={2}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                        placeholder="Describe the service provided..."
+                        placeholder="Enter commitment fee paid"
                       />
-                      {errors.services?.[index]?.description && (
-                        <p className="text-red-500 text-sm mt-1">{errors.services[index]?.description?.message}</p>
+                      {errors.commitmentFeePaid && (
+                        <p className="text-red-500 text-sm mt-1">{errors.commitmentFeePaid.message}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Total Amount For Moving ({watchedCurrency}) *
+                      </label>
                       <input
                         type="number"
-                        min="1"
-                        {...register(`services.${index}.quantity`, {
-                          required: "Quantity is required",
-                          min: { value: 1, message: "Quantity must be at least 1" },
+                        min="0"
+                        step="0.01"
+                        {...register("totalMovingAmount", {
+                          required: "Total moving amount is required",
+                          min: { value: 0, message: "Amount must be positive" },
                         })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                        placeholder="Enter total moving amount"
                       />
-                      {errors.services?.[index]?.quantity && (
-                        <p className="text-red-500 text-sm mt-1">{errors.services[index]?.quantity?.message}</p>
+                      {errors.totalMovingAmount && (
+                        <p className="text-red-500 text-sm mt-1">{errors.totalMovingAmount.message}</p>
                       )}
                     </div>
                   </div>
 
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Amount ({watchedCurrency}) *</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      {...register(`services.${index}.amount`, {
-                        required: "Amount is required",
-                        min: { value: 0, message: "Amount must be positive" },
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                    />
-                    {errors.services?.[index]?.amount && (
-                      <p className="text-red-500 text-sm mt-1">{errors.services[index]?.amount?.message}</p>
-                    )}
-                  </div>
-
-                  {/* Service Total */}
-                  <div className="mt-4 p-3 bg-white rounded-lg border">
+                  {/* Balance Due (calculated) */}
+                  <div className="mt-6 p-4 bg-white rounded-lg border">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-600">Line Total:</span>
-                      <span className="text-lg font-semibold text-aces-green">
-                        {formatCurrency(
-                          (watchedServices[index]?.quantity || 0) * (watchedServices[index]?.amount || 0)
-                        )}
+                      <span className="text-lg font-medium text-gray-700">Balance Due:</span>
+                      <span className="text-xl font-bold text-aces-green">
+                        {formatCurrency((watch("totalMovingAmount") || 0) - (watch("commitmentFeePaid") || 0))}
                       </span>
                     </div>
                   </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Total Summary */}
-            <div className="bg-aces-green/5 rounded-lg p-6 border border-aces-green/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Calculator className="w-5 h-5 text-aces-green" />
-                  <span className="text-xl font-bold text-gray-900">Total Amount:</span>
                 </div>
-                <span className="text-2xl font-bold text-aces-green">{formatCurrency(totalAmount)}</span>
+
+                {/* Summary Table for Commitment Receipt */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h4 className="text-md font-semibold text-gray-900 mb-4">Receipt Summary</h4>
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 text-sm font-medium text-gray-700">Description</th>
+                        <th className="text-right py-2 text-sm font-medium text-gray-700">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b">
+                        <td className="py-2 text-sm text-gray-600">Commitment Fee Paid</td>
+                        <td className="py-2 text-sm text-right font-semibold text-green-600">
+                          {formatCurrency(watch("commitmentFeePaid") || 0)}
+                        </td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-2 text-sm text-gray-600">Total Amount For Moving</td>
+                        <td className="py-2 text-sm text-right font-semibold">
+                          {formatCurrency(watch("totalMovingAmount") || 0)}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-sm text-gray-600 font-medium">Balance Due</td>
+                        <td className="py-2 text-sm text-right font-bold text-red-600">
+                          {formatCurrency((watch("totalMovingAmount") || 0) - (watch("commitmentFeePaid") || 0))}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Regular Services for other receipt types */
+              <div className="space-y-4">
+                {fields.map((field, index) => (
+                  <motion.div
+                    key={field.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gray-50 rounded-lg p-6 relative"
+                  >
+                    {fields.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => remove(index)}
+                        className="absolute top-4 right-4 p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Service Description *</label>
+                        <textarea
+                          {...register(`services.${index}.description`, {
+                            required: "Service description is required",
+                            minLength: { value: 1, message: "Description must have at least 1 character" },
+                            maxLength: { value: 500, message: "Description cannot exceed 500 characters" },
+                          })}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                          placeholder="Describe the service provided..."
+                        />
+                        {errors.services?.[index]?.description && (
+                          <p className="text-red-500 text-sm mt-1">{errors.services[index]?.description?.message}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
+                        <input
+                          type="number"
+                          min="1"
+                          {...register(`services.${index}.quantity`, {
+                            required: "Quantity is required",
+                            min: { value: 1, message: "Quantity must be at least 1" },
+                          })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                        />
+                        {errors.services?.[index]?.quantity && (
+                          <p className="text-red-500 text-sm mt-1">{errors.services[index]?.quantity?.message}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Amount ({watchedCurrency}) *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        {...register(`services.${index}.amount`, {
+                          required: "Amount is required",
+                          min: { value: 0, message: "Amount must be positive" },
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                      />
+                      {errors.services?.[index]?.amount && (
+                        <p className="text-red-500 text-sm mt-1">{errors.services[index]?.amount?.message}</p>
+                      )}
+                    </div>
+
+                    {/* Service Total */}
+                    <div className="mt-4 p-3 bg-white rounded-lg border">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-600">Line Total:</span>
+                        <span className="text-lg font-semibold text-aces-green">
+                          {formatCurrency(
+                            (watchedServices[index]?.quantity || 0) * (watchedServices[index]?.amount || 0)
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+
+                {/* Total Summary for regular receipts */}
+                <div className="bg-aces-green/5 rounded-lg p-6 border border-aces-green/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Calculator className="w-5 h-5 text-aces-green" />
+                      <span className="text-xl font-bold text-gray-900">Total Amount:</span>
+                    </div>
+                    <span className="text-2xl font-bold text-aces-green">{formatCurrency(totalAmount)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -620,108 +709,8 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
             className="space-y-6"
           >
             <div className="flex items-center space-x-2 mb-4">
-              <CreditCard className="w-5 h-5 text-aces-green" />
-              <h3 className="text-lg font-semibold text-gray-900">Payment & Signatures</h3>
-            </div>
-
-            {/* Payment Information */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h4 className="text-md font-semibold text-gray-900 mb-4">Payment Details</h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                  <select
-                    {...register("payment.currency")}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                  >
-                    <option value="UGX">UGX - Ugandan Shilling</option>
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - British Pound</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method *</label>
-                  <select
-                    {...register("payment.method", { required: "Payment method is required" })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="mobile_money">Mobile Money</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="cheque">Cheque</option>
-                  </select>
-                  {errors.payment?.method && (
-                    <p className="text-red-500 text-sm mt-1">{errors.payment.method.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
-                  <input
-                    type="date"
-                    {...register("payment.dueDate")}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Signatures */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h4 className="text-md font-semibold text-gray-900 mb-4">Signatures</h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Received By *</label>
-                  <input
-                    type="text"
-                    {...register("signatures.receivedBy", { required: "Received by is required" })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                    placeholder="Employee name"
-                  />
-                  {errors.signatures?.receivedBy && (
-                    <p className="text-red-500 text-sm mt-1">{errors.signatures.receivedBy.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Title/Position</label>
-                  <input
-                    type="text"
-                    {...register("signatures.receivedByTitle")}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                    placeholder="e.g., Manager, Sales Rep"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Client Name *</label>
-                  <input
-                    type="text"
-                    {...register("signatures.clientName", { required: "Client signature name is required" })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                    placeholder="Client's full name"
-                  />
-                  {errors.signatures?.clientName && (
-                    <p className="text-red-500 text-sm mt-1">{errors.signatures.clientName.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Signature Date *</label>
-                  <input
-                    type="date"
-                    {...register("signatures.signatureDate", { required: "Signature date is required" })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                  />
-                  {errors.signatures?.signatureDate && (
-                    <p className="text-red-500 text-sm mt-1">{errors.signatures.signatureDate.message}</p>
-                  )}
-                </div>
-              </div>
+              <Notebook className="w-5 h-5 text-aces-green" />
+              <h3 className="text-lg font-semibold text-gray-900">Notes</h3>
             </div>
 
             {/* Notes */}
@@ -788,7 +777,11 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
             {currentStep < 4 ? (
               <Button
                 type="button"
-                onClick={() => setCurrentStep(currentStep + 1)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCurrentStep(currentStep + 1);
+                }}
                 variant="primary"
                 disabled={isLoading}
               >
@@ -796,7 +789,6 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
               </Button>
             ) : (
               <Button type="submit" disabled={isLoading} variant="primary" className="flex items-center space-x-2">
-                <Save className="w-4 h-4" />
                 <span>{isLoading ? "Creating..." : "Create Receipt"}</span>
               </Button>
             )}

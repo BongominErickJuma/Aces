@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import {
   Save,
-  X,
   Plus,
   Trash2,
   Calculator,
@@ -20,7 +20,6 @@ import { quotationsAPI, type CreateQuotationData, type Quotation } from "../../.
 import { Button } from "../../../components/ui/Button";
 
 interface QuotationCreateFormProps {
-  onSuccess: (quotation: Quotation) => void;
   onCancel: () => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
@@ -28,7 +27,8 @@ interface QuotationCreateFormProps {
 
 interface FormData extends CreateQuotationData {}
 
-const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onSuccess, onCancel, isLoading, setIsLoading }) => {
+const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isLoading, setIsLoading }) => {
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -57,7 +57,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onSuccess, on
       services: [
         {
           name: "Packaging",
-          description: "",
+          description: "Standard packaging service",
           quantity: 1,
           unitPrice: 0,
         },
@@ -92,6 +92,12 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onSuccess, on
   const totalAmount = taxableAmount + taxAmount;
 
   const onSubmit = async (data: FormData) => {
+    // Prevent submission if not on the final step
+    if (currentStep !== 4) {
+      console.warn('Form submitted but not on step 4, current step:', currentStep);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -111,7 +117,10 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onSuccess, on
       };
 
       const response = await quotationsAPI.createQuotation(quotationData);
-      onSuccess(response.data);
+      // Navigate to quotations list after successful creation
+      navigate('/quotations', {
+        state: { message: `Quotation ${response.data.quotation.quotationNumber} created successfully` }
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create quotation");
     } finally {
@@ -122,7 +131,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onSuccess, on
   const addService = () => {
     append({
       name: "",
-      description: "",
+      description: "Service description",
       quantity: 1,
       unitPrice: 0,
     });
@@ -282,15 +291,17 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onSuccess, on
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
-                  <input
-                    type="text"
-                    {...register("client.company")}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                    placeholder="ABC Company Ltd."
-                  />
-                </div>
+                {quotationType === "Office" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+                    <input
+                      type="text"
+                      {...register("client.company")}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                      placeholder="ABC Company Ltd."
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
@@ -368,7 +379,6 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onSuccess, on
                 size="sm"
                 className="flex items-center space-x-2"
               >
-                <Plus className="w-4 h-4" />
                 <span>Add Service</span>
               </Button>
             </div>
@@ -444,13 +454,20 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onSuccess, on
                   </div>
 
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
                     <textarea
-                      {...register(`services.${index}.description`)}
+                      {...register(`services.${index}.description`, {
+                        required: "Service description is required",
+                        minLength: { value: 1, message: "Description must have at least 1 character" },
+                        maxLength: { value: 500, message: "Description cannot exceed 500 characters" }
+                      })}
                       rows={2}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
                       placeholder="Additional details about this service..."
                     />
+                    {errors.services?.[index]?.description && (
+                      <p className="text-red-500 text-sm mt-1">{errors.services[index]?.description?.message}</p>
+                    )}
                   </div>
 
                   {/* Service Total */}
@@ -486,19 +503,6 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onSuccess, on
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Pricing Settings */}
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                  <select
-                    {...register("pricing.currency")}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                  >
-                    <option value="UGX">UGX - Ugandan Shilling</option>
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - British Pound</option>
-                  </select>
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Discount (%)</label>
                   <input
@@ -621,7 +625,11 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onSuccess, on
             {currentStep < 4 ? (
               <Button
                 type="button"
-                onClick={() => setCurrentStep(currentStep + 1)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCurrentStep(currentStep + 1);
+                }}
                 variant="primary"
                 disabled={isLoading}
               >
@@ -629,7 +637,6 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onSuccess, on
               </Button>
             ) : (
               <Button type="submit" disabled={isLoading} variant="primary" className="flex items-center space-x-2">
-                <Save className="w-4 h-4" />
                 <span>{isLoading ? "Creating..." : "Create Quotation"}</span>
               </Button>
             )}
