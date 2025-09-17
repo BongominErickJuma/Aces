@@ -160,7 +160,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* Error Alert */}
       {error && (
         <motion.div
@@ -176,7 +176,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
       )}
 
       {/* Progress Steps */}
-      <div className="bg-gray-50 rounded-lg p-4">
+      <div className="bg-gray-50 rounded-lg p-3 lg:p-4">
         <div className="flex items-center justify-between">
           {steps.map((step, index) => {
             const Icon = step.icon;
@@ -186,7 +186,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
             return (
               <div key={step.id} className="flex items-center">
                 <div
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center space-x-1 lg:space-x-2 px-2 lg:px-3 py-2 rounded-lg transition-colors ${
                     isActive
                       ? "bg-aces-green text-white"
                       : isCompleted
@@ -195,10 +195,10 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                   }`}
                 >
                   <Icon className="w-4 h-4" />
-                  <span className="text-sm font-medium">{step.title}</span>
+                  <span className="text-xs lg:text-sm font-medium hidden lg:inline">{step.title}</span>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-8 h-0.5 mx-2 ${isCompleted ? "bg-green-300" : "bg-gray-300"}`} />
+                  <div className={`w-4 lg:w-8 h-0.5 mx-1 lg:mx-2 ${isCompleted ? "bg-green-300" : "bg-gray-300"}`} />
                 )}
               </div>
             );
@@ -206,15 +206,10 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 lg:space-y-8">
         {/* Step 1: Basic Information */}
         {currentStep === 1 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             <div className="flex items-center space-x-2 mb-4">
               <User className="w-5 h-5 text-aces-green" />
               <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
@@ -223,7 +218,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
             {/* Quotation Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Quotation Type *</label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {["Residential", "Office", "International"].map((type) => (
                   <label key={type} className="relative">
                     <input
@@ -232,12 +227,12 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                       {...register("type", { required: "Quotation type is required" })}
                       className="peer sr-only"
                     />
-                    <div className="p-4 border border-gray-300 rounded-lg cursor-pointer peer-checked:border-aces-green peer-checked:bg-aces-green/5 hover:bg-gray-50 transition-colors">
+                    <div className="p-3 lg:p-4 border border-gray-300 rounded-lg cursor-pointer peer-checked:border-aces-green peer-checked:bg-aces-green/5 hover:bg-gray-50 transition-colors">
                       <div className="flex items-center space-x-3">
                         {getQuotationTypeIcon(type)}
                         <div>
                           <div className="font-medium text-gray-900">{type}</div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-xs lg:text-sm text-gray-500">
                             {type === "Residential" && "Home and apartment moves"}
                             {type === "Office" && "Business and office relocations"}
                             {type === "International" && "Cross-border moving services"}
@@ -252,9 +247,9 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
             </div>
 
             {/* Client Information */}
-            <div className="bg-gray-50 rounded-lg p-6">
+            <div className="bg-gray-50 rounded-lg p-4 lg:p-6">
               <h4 className="text-md font-semibold text-gray-900 mb-4">Client Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Client Name *</label>
                   <input
@@ -300,23 +295,18 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                 )}
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Step 2: Locations */}
         {currentStep === 2 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             <div className="flex items-center space-x-2 mb-4">
               <MapPin className="w-5 h-5 text-aces-green" />
               <h3 className="text-lg font-semibold text-gray-900">Location Details</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">From Location *</label>
                 <textarea
@@ -352,17 +342,12 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                 <p className="text-red-500 text-sm mt-1">{errors.locations.movingDate.message}</p>
               )}
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Step 3: Services */}
         {currentStep === 3 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
                 <Package className="w-5 h-5 text-aces-green" />
@@ -381,10 +366,8 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
 
             <div className="space-y-4">
               {fields.map((field, index) => (
-                <motion.div
+                <div
                   key={field.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
                   className="bg-gray-50 rounded-lg p-6 relative"
                 >
                   {fields.length > 1 && (
@@ -397,7 +380,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                     </button>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                     <div className="lg:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Service Name *</label>
                       <input
@@ -413,7 +396,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                       )}
                     </div>
 
-                    <div>
+                    <div className="lg:col-span-1">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
                       <input
                         type="number"
@@ -429,7 +412,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                       )}
                     </div>
 
-                    <div>
+                    <div className="lg:col-span-1">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Unit Price ({watchedCurrency}) *
                       </label>
@@ -477,20 +460,15 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                       </span>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Step 4: Pricing */}
         {currentStep === 4 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             <div className="flex items-center space-x-2 mb-4">
               <DollarSign className="w-5 h-5 text-aces-green" />
               <h3 className="text-lg font-semibold text-gray-900">Pricing & Summary</h3>
@@ -590,18 +568,19 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                 />
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Navigation Buttons */}
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-          <div className="flex items-center space-x-3">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between pt-6 border-t border-gray-200 space-y-4 lg:space-y-0">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center space-y-3 lg:space-y-0 lg:space-x-3">
             {currentStep > 1 && (
               <Button
                 type="button"
                 onClick={() => setCurrentStep(currentStep - 1)}
                 variant="secondary"
                 disabled={isLoading}
+                className="w-full lg:w-auto"
               >
                 Previous
               </Button>
@@ -611,7 +590,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
               onClick={onCancel}
               variant="secondary"
               disabled={isLoading}
-              className="flex items-center"
+              className="flex items-center w-full lg:w-auto justify-center"
             >
               <span>Cancel</span>
             </Button>
@@ -628,11 +607,12 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                 }}
                 variant="primary"
                 disabled={isLoading}
+                className="w-full lg:w-auto"
               >
                 Next
               </Button>
             ) : (
-              <Button type="submit" disabled={isLoading} variant="primary" className="flex items-center space-x-2">
+              <Button type="submit" disabled={isLoading} variant="primary" className="flex items-center space-x-2 w-full lg:w-auto justify-center">
                 <span>{isLoading ? "Creating..." : "Create Quotation"}</span>
               </Button>
             )}

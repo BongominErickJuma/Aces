@@ -136,7 +136,7 @@ const PersonalInformationTab: React.FC<PersonalInformationTabProps> = ({
         <button
           onClick={onSave}
           disabled={saving || !isFormValid()}
-          className="flex items-center gap-2 px-6 py-2 bg-aces-green text-white rounded-lg hover:bg-aces-green/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2 bg-aces-green text-white rounded-lg hover:bg-aces-green/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {saving ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

@@ -28,20 +28,20 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profileData, avatarUp
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+      className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6"
     >
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start lg:items-center gap-4 sm:gap-6">
         {/* Avatar Section */}
-        <div className="relative">
-          <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+        <div className="relative flex-shrink-0">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
             {profileData.profilePhoto?.url ? (
               <img src={profileData.profilePhoto.url} alt="Profile" className="w-full h-full object-cover" />
             ) : (
-              <UserIcon className="w-16 h-16 text-gray-400" />
+              <UserIcon className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 text-gray-400" />
             )}
           </div>
-          <label className="absolute bottom-0 right-0 bg-aces-green text-white rounded-full p-2 cursor-pointer hover:bg-aces-green/90 transition-colors">
-            <Camera className="w-4 h-4" />
+          <label className="absolute bottom-0 right-0 bg-aces-green text-white rounded-full p-1.5 sm:p-2 cursor-pointer hover:bg-aces-green/90 transition-colors">
+            <Camera className="w-3 h-3 sm:w-4 sm:h-4" />
             <input
               type="file"
               accept="image/*"
@@ -52,16 +52,16 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profileData, avatarUp
           </label>
           {avatarUploading && (
             <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white"></div>
             </div>
           )}
         </div>
 
         {/* User Info */}
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{profileData.fullName}</h1>
-          <p className="text-gray-600 mb-2">{profileData.email}</p>
-          <div className="flex items-center gap-4 mb-4">
+        <div className="flex-1 text-center sm:text-left">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">{profileData.fullName}</h1>
+          <p className="text-sm sm:text-base text-gray-600 mb-2">{profileData.email}</p>
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mb-3 sm:mb-4">
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
               {profileData.role}
             </span>
@@ -71,7 +71,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profileData, avatarUp
               ) : (
                 <AlertCircle className="w-4 h-4 text-red-600" />
               )}
-              <span className={`text-sm font-medium ${getProfileCompletionColor(profileData.profileCompleted)}`}>
+              <span className={`text-xs sm:text-sm font-medium ${getProfileCompletionColor(profileData.profileCompleted)}`}>
                 Profile {completionPercentage}% Complete
               </span>
             </div>
@@ -86,7 +86,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profileData, avatarUp
           </div>
 
           {!profileData.profileCompleted && (
-            <div className="text-sm text-gray-500">
+            <div className="text-xs sm:text-sm text-gray-500">
               <p className="mb-1">Complete your profile to unlock all features</p>
               {profileData.profileCompletionStatus?.missingFields &&
                 profileData.profileCompletionStatus.missingFields.length > 0 && (

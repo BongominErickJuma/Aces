@@ -186,51 +186,58 @@ const NotificationsPage: React.FC = () => {
     <PageLayout>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Bell className="w-8 h-8 text-aces-green" />
-              Notifications
-            </h1>
-            <p className="text-gray-600 mt-1">Stay updated with your system activities</p>
-          </div>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+                <Bell className="w-6 h-6 sm:w-8 sm:h-8 text-aces-green" />
+                Notifications
+              </h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">Stay updated with your system activities</p>
+            </div>
 
-          {/* Bulk Actions */}
-          <div className="flex items-center gap-2">
-            {selectedNotifications.size > 0 && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                onClick={handleBulkMarkAsRead}
-                className="px-4 py-2 bg-aces-green text-white rounded-lg hover:bg-aces-green/90 transition-colors flex items-center gap-2"
+            {/* Bulk Actions */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              {selectedNotifications.size > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  onClick={handleBulkMarkAsRead}
+                  className="px-3 sm:px-4 py-2 bg-aces-green text-white rounded-lg hover:bg-aces-green/90 transition-colors flex items-center justify-center gap-2 text-sm"
+                >
+                  <CheckCheck className="w-4 h-4" />
+                  <span className="hidden sm:inline">Mark {selectedNotifications.size} as Read</span>
+                  <span className="sm:hidden">Mark ({selectedNotifications.size}) Read</span>
+                </motion.button>
+              )}
+
+              <button
+                onClick={handleMarkAllAsRead}
+                className="px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 text-sm"
               >
                 <CheckCheck className="w-4 h-4" />
-                Mark {selectedNotifications.size} as Read
-              </motion.button>
-            )}
-
-            <button
-              onClick={handleMarkAllAsRead}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
-            >
-              <CheckCheck className="w-4 h-4" />
-              Mark All Read
-            </button>
+                <span className="hidden sm:inline">Mark All Read</span>
+                <span className="sm:hidden">All Read</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex flex-wrap items-center gap-4">
-            <Filter className="w-5 h-5 text-gray-500" />
+        <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700 sm:hidden">Filters:</span>
+            </div>
 
             {/* Read Status Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">Status:</span>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-sm font-medium text-gray-700 min-w-fit">Status:</span>
               <select
                 value={selectedFilter}
                 onChange={(e) => setSelectedFilter(e.target.value as "all" | "unread" | "read")}
-                className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                className="flex-1 sm:flex-initial px-2 sm:px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-aces-green focus:border-transparent"
               >
                 <option value="all">All</option>
                 <option value="unread">Unread</option>
@@ -239,12 +246,12 @@ const NotificationsPage: React.FC = () => {
             </div>
 
             {/* Priority Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">Priority:</span>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-sm font-medium text-gray-700 min-w-fit">Priority:</span>
               <select
                 value={selectedPriority}
                 onChange={(e) => setSelectedPriority(e.target.value as NotificationPriority | "all")}
-                className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                className="flex-1 sm:flex-initial px-2 sm:px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-aces-green focus:border-transparent"
               >
                 <option value="all">All</option>
                 <option value="urgent">Urgent</option>
@@ -286,17 +293,98 @@ const NotificationsPage: React.FC = () => {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ delay: index * 0.05 }}
-                      className={`p-4 hover:bg-gray-50 transition-colors ${
+                      className={`p-3 sm:p-4 hover:bg-gray-50 transition-colors ${
                         !notification.read ? "bg-blue-50/50 border-l-4 border-l-blue-500" : ""
                       }`}
                     >
-                      <div className="flex items-start gap-3">
+                      {/* Mobile Layout (< xl) */}
+                      <div className="xl:hidden">
+                        {/* Top Row: Checkbox, Icon, Title, and Actions */}
+                        <div className="flex items-start gap-2 mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedNotifications.has(notification._id)}
+                            onChange={() => toggleNotificationSelection(notification._id)}
+                            className="mt-1 rounded border-gray-300 text-aces-green focus:ring-aces-green flex-shrink-0"
+                          />
+
+                          <div className="flex-shrink-0 mt-1">
+                            {getNotificationIcon(notification.type, notification.priority)}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <h4
+                              className={`text-sm font-medium ${
+                                !notification.read ? "text-gray-900" : "text-gray-700"
+                              }`}
+                            >
+                              {notification.title}
+                            </h4>
+                          </div>
+
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {notification.actionUrl && (
+                              <button
+                                onClick={() => window.open(notification.actionUrl, "_blank")}
+                                className="p-1 text-gray-400 hover:text-aces-green transition-colors"
+                                title={notification.actionText || "View"}
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => handleMarkAsRead(notification._id, notification.read)}
+                              className="p-1 text-gray-400 hover:text-aces-green transition-colors"
+                              title={notification.read ? "Mark as unread" : "Mark as read"}
+                            >
+                              {notification.read ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteNotification(notification._id)}
+                              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                              title="Delete notification"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Message Body */}
+                        <div className="ml-8">
+                          <p className={`text-sm ${!notification.read ? "text-gray-800" : "text-gray-600"}`}>
+                            {notification.message}
+                          </p>
+
+                          <div className="flex flex-col gap-1 mt-2">
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full self-start ${getPriorityColor(
+                                notification.priority
+                              )}`}
+                            >
+                              {notification.priority}
+                            </span>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs text-gray-500">
+                                {notification.timeAgo || new Date(notification.createdAt).toLocaleDateString()}
+                              </span>
+                              {notification.actor && (
+                                <span className="text-xs text-gray-500">by {notification.actor.fullName}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Desktop Layout (xl+) */}
+                      <div className="hidden xl:flex items-start gap-3">
                         {/* Selection checkbox */}
                         <input
                           type="checkbox"
                           checked={selectedNotifications.has(notification._id)}
                           onChange={() => toggleNotificationSelection(notification._id)}
-                          className="mt-1 rounded border-gray-300 text-aces-green focus:ring-aces-green"
+                          className="mt-1 rounded border-gray-300 text-aces-green focus:ring-aces-green flex-shrink-0"
                         />
 
                         {/* Icon */}
@@ -307,7 +395,7 @@ const NotificationsPage: React.FC = () => {
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <h4
                                 className={`text-sm font-medium ${
                                   !notification.read ? "text-gray-900" : "text-gray-700"
@@ -327,12 +415,14 @@ const NotificationsPage: React.FC = () => {
                                 >
                                   {notification.priority}
                                 </span>
-                                <span className="text-xs text-gray-500">
-                                  {notification.timeAgo || new Date(notification.createdAt).toLocaleDateString()}
-                                </span>
-                                {notification.actor && (
-                                  <span className="text-xs text-gray-500">by {notification.actor.fullName}</span>
-                                )}
+                                <div className="flex items-center gap-3">
+                                  <span className="text-xs text-gray-500">
+                                    {notification.timeAgo || new Date(notification.createdAt).toLocaleDateString()}
+                                  </span>
+                                  {notification.actor && (
+                                    <span className="text-xs text-gray-500">by {notification.actor.fullName}</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
 
@@ -375,8 +465,8 @@ const NotificationsPage: React.FC = () => {
 
             {/* Pagination */}
             {notifications && notifications.totalPages > 1 && (
-              <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-                <div className="text-sm text-gray-500">
+              <div className="px-3 sm:px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">
                   Showing {notifications.pagingCounter} to{" "}
                   {Math.min(notifications.pagingCounter + notifications.limit - 1, notifications.totalDocs)} of{" "}
                   {notifications.totalDocs} notifications
@@ -386,19 +476,20 @@ const NotificationsPage: React.FC = () => {
                   <button
                     onClick={() => loadNotifications(currentPage - 1)}
                     disabled={!notifications.hasPrevPage || loading}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Previous
+                    <span className="hidden sm:inline">Previous</span>
+                    <span className="sm:hidden">Prev</span>
                   </button>
 
-                  <span className="text-sm text-gray-600">
-                    Page {notifications.page} of {notifications.totalPages}
+                  <span className="text-xs sm:text-sm text-gray-600 px-2">
+                    {notifications.page} / {notifications.totalPages}
                   </span>
 
                   <button
                     onClick={() => loadNotifications(currentPage + 1)}
                     disabled={!notifications.hasNextPage || loading}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                   </button>

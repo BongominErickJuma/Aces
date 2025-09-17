@@ -218,7 +218,7 @@ const ProfilePage: React.FC = () => {
 
         {/* Tab Navigation */}
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-2 sm:space-x-4 lg:space-x-8 overflow-x-auto">
             {[
               { id: "overview", label: "Personal Information", icon: UserIcon },
               { id: "signature", label: "Digital Signature", icon: FileSignature },
@@ -227,14 +227,17 @@ const ProfilePage: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                className={`flex items-center gap-2 py-2 px-2 sm:px-1 lg:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                   activeTab === tab.id
                     ? "border-aces-green text-aces-green"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
+                <tab.icon className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">
+                  {tab.id === "overview" ? "Personal" : tab.id === "signature" ? "Signature" : "Security"}
+                </span>
               </button>
             ))}
           </nav>

@@ -1,19 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  Trash2,
-  Calendar,
-  DollarSign,
-  User,
-  MapPin,
-  FileText,
-  AlertCircle,
-  Loader2,
-  Phone,
-  Mail,
-  Home,
-} from "lucide-react";
+import { Trash2, Calendar, User, MapPin, FileText, AlertCircle, Loader2, Phone, Mail, Home } from "lucide-react";
 import { PageLayout } from "../../components/layout";
 import { Button } from "../../components/ui/Button";
 import { receiptsAPI, type Receipt, type ReceiptService } from "../../services/receipts";
@@ -57,6 +45,8 @@ const ReceiptEditPage: React.FC = () => {
     // Commitment receipt specific fields
     commitmentFeePaid: 0,
     totalMovingAmount: 0,
+    // Final receipt specific fields
+    finalPaymentReceived: 0,
   });
 
   useEffect(() => {
@@ -75,22 +65,22 @@ const ReceiptEditPage: React.FC = () => {
       const receiptData = response.data.receipt;
       setReceipt(receiptData);
 
-      // For commitment receipts, extract the commitment fee and total from services
+      // Extract receipt type specific fields from direct properties
       let commitmentFeePaid = 0;
       let totalMovingAmount = 0;
+      let finalPaymentReceived = 0;
 
-      if (receiptData.receiptType === "commitment" && receiptData.services) {
-        // Find the commitment fee service item
-        const commitmentFeeService = receiptData.services.find((s) => s.description === "Commitment Fee Paid");
-        if (commitmentFeeService) {
-          commitmentFeePaid = commitmentFeeService.amount;
-        }
-
-        // Find the total amount service item
-        const totalAmountService = receiptData.services.find((s) => s.description === "Total Amount For Moving");
-        if (totalAmountService) {
-          totalMovingAmount = totalAmountService.amount;
-        }
+      if (receiptData.receiptType === "commitment") {
+        // Use direct fields for commitment receipts
+        commitmentFeePaid = receiptData.commitmentFeePaid || 0;
+        totalMovingAmount = receiptData.totalMovingAmount || 0;
+      } else if (receiptData.receiptType === "final") {
+        // Use direct fields for final receipts
+        commitmentFeePaid = receiptData.commitmentFeePaid || 0;
+        finalPaymentReceived = receiptData.finalPaymentReceived || 0;
+      } else if (receiptData.receiptType === "one_time") {
+        // Use direct fields for one-time receipts
+        totalMovingAmount = receiptData.totalMovingAmount || 0;
       }
 
       // Populate form with existing data
@@ -126,6 +116,7 @@ const ReceiptEditPage: React.FC = () => {
         notes: receiptData.notes || "",
         commitmentFeePaid: commitmentFeePaid,
         totalMovingAmount: totalMovingAmount,
+        finalPaymentReceived: finalPaymentReceived,
       });
     } catch (err) {
       console.error("Failed to fetch receipt:", err);
@@ -199,8 +190,9 @@ const ReceiptEditPage: React.FC = () => {
       return;
     }
 
-    if (formData.receiptType !== "commitment" && formData.services.length === 0) {
-      setError("At least one service is required");
+    // Only box receipts require services
+    if (formData.receiptType === "box" && formData.services.length === 0) {
+      setError("At least one service is required for box receipts");
       return;
     }
 
@@ -215,8 +207,24 @@ const ReceiptEditPage: React.FC = () => {
         setError("Total moving amount must be greater than zero");
         return;
       }
-    } else {
-      // Validate regular services
+    } else if (formData.receiptType === "final") {
+      // Validate final receipt fields
+      if (!formData.commitmentFeePaid && formData.commitmentFeePaid !== 0) {
+        setError("Commitment fee (previously paid) is required");
+        return;
+      }
+      if (!formData.finalPaymentReceived && formData.finalPaymentReceived !== 0) {
+        setError("Final payment received is required");
+        return;
+      }
+    } else if (formData.receiptType === "one_time") {
+      // Validate one-time payment fields
+      if (!formData.totalMovingAmount || formData.totalMovingAmount <= 0) {
+        setError("Total moving amount must be greater than zero");
+        return;
+      }
+    } else if (formData.receiptType === "box") {
+      // Validate regular services for box receipts only
       const hasInvalidServices = formData.services.some((service) => !service.description || service.amount <= 0);
 
       if (hasInvalidServices) {
@@ -241,6 +249,43 @@ const ReceiptEditPage: React.FC = () => {
               ? formData.locations
               : undefined,
           commitmentFeePaid: Number(formData.commitmentFeePaid),
+          totalMovingAmount: Number(formData.totalMovingAmount),
+          payment: {
+            currency: formData.payment.currency,
+            method: formData.payment.method || undefined,
+            dueDate: formData.payment.dueDate || undefined,
+          },
+          signatures: formData.signatures,
+          notes: formData.notes || undefined,
+        };
+      } else if (formData.receiptType === "final") {
+        // For final receipts, send final-specific data
+        updateData = {
+          receiptType: formData.receiptType,
+          client: formData.client,
+          locations:
+            formData.locations.from || formData.locations.to || formData.locations.movingDate
+              ? formData.locations
+              : undefined,
+          commitmentFeePaid: Number(formData.commitmentFeePaid),
+          finalPaymentReceived: Number(formData.finalPaymentReceived),
+          payment: {
+            currency: formData.payment.currency,
+            method: formData.payment.method || undefined,
+            dueDate: formData.payment.dueDate || undefined,
+          },
+          signatures: formData.signatures,
+          notes: formData.notes || undefined,
+        };
+      } else if (formData.receiptType === "one_time") {
+        // For one-time payment receipts, send one-time-specific data
+        updateData = {
+          receiptType: formData.receiptType,
+          client: formData.client,
+          locations:
+            formData.locations.from || formData.locations.to || formData.locations.movingDate
+              ? formData.locations
+              : undefined,
           totalMovingAmount: Number(formData.totalMovingAmount),
           payment: {
             currency: formData.payment.currency,
@@ -497,7 +542,7 @@ const ReceiptEditPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-medium text-gray-700">Balance Due:</span>
                   <span className="text-xl font-bold text-emerald-600">
-                    {formatCurrency(formData.totalMovingAmount - formData.commitmentFeePaid)}
+                    {formatCurrency((formData.totalMovingAmount || 0) - (formData.commitmentFeePaid || 0))}
                   </span>
                 </div>
               </div>
@@ -516,33 +561,149 @@ const ReceiptEditPage: React.FC = () => {
                     <tr className="border-b">
                       <td className="py-2 text-sm text-gray-600">Commitment Fee Paid</td>
                       <td className="py-2 text-sm text-right font-semibold text-green-600">
-                        {formatCurrency(formData.commitmentFeePaid)}
+                        {formatCurrency(formData.commitmentFeePaid || 0)}
                       </td>
                     </tr>
                     <tr className="border-b">
                       <td className="py-2 text-sm text-gray-600">Total Amount For Moving</td>
                       <td className="py-2 text-sm text-right font-semibold">
-                        {formatCurrency(formData.totalMovingAmount)}
+                        {formatCurrency(formData.totalMovingAmount || 0)}
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2 text-sm text-gray-600 font-medium">Balance Due</td>
                       <td className="py-2 text-sm text-right font-bold text-red-600">
-                        {formatCurrency(formData.totalMovingAmount - formData.commitmentFeePaid)}
+                        {formatCurrency((formData.totalMovingAmount || 0) - (formData.commitmentFeePaid || 0))}
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
-          ) : formData.services.length === 0 ? (
+          ) : formData.receiptType === "final" ? (
+            /* Final Receipt Fields */
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Commitment Fee Paid (Previously) ({formData.payment.currency}) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.commitmentFeePaid}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, commitmentFeePaid: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    min="0"
+                    step="1000"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Final Payment Received ({formData.payment.currency}) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.finalPaymentReceived}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, finalPaymentReceived: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    min="0"
+                    step="1000"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Grand Total */}
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-medium text-gray-700">Grand Total:</span>
+                  <span className="text-xl font-bold text-emerald-600">
+                    {formatCurrency((formData.commitmentFeePaid || 0) + (formData.finalPaymentReceived || 0))}
+                  </span>
+                </div>
+              </div>
+
+              {/* Summary Table for Final Receipt */}
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Receipt Summary</h3>
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 text-sm font-medium text-gray-700">Description</th>
+                      <th className="text-right py-2 text-sm font-medium text-gray-700">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="py-2 text-sm text-gray-600">Commitment Fee Paid (Previously)</td>
+                      <td className="py-2 text-sm text-right font-semibold">
+                        {formatCurrency(formData.commitmentFeePaid || 0)}
+                      </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="py-2 text-sm text-gray-600">Final Payment Received</td>
+                      <td className="py-2 text-sm text-right font-semibold text-green-600">
+                        {formatCurrency(formData.finalPaymentReceived || 0)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 text-sm text-gray-600 font-medium">Grand Total</td>
+                      <td className="py-2 text-sm text-right font-bold text-emerald-600">
+                        {formatCurrency((formData.commitmentFeePaid || 0) + (formData.finalPaymentReceived || 0))}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : formData.receiptType === "one_time" ? (
+            /* One Time Payment Fields */
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Total Amount For Moving ({formData.payment.currency}) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={formData.totalMovingAmount}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, totalMovingAmount: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  min="0"
+                  step="1000"
+                  required
+                />
+              </div>
+
+              {/* Summary Table for One Time Payment */}
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Receipt Summary</h3>
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 text-sm font-medium text-gray-700">Description</th>
+                      <th className="text-right py-2 text-sm font-medium text-gray-700">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="py-2 text-sm text-gray-600 font-medium">Total Amount For Moving</td>
+                      <td className="py-2 text-sm text-right font-bold text-emerald-600">
+                        {formatCurrency(formData.totalMovingAmount || 0)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : formData.receiptType === "box" && formData.services.length === 0 ? (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
               <p className="text-gray-500 mb-3">No services added yet</p>
               <Button type="button" onClick={addService} variant="primary" size="sm">
                 Add First Service
               </Button>
             </div>
-          ) : (
+          ) : formData.receiptType === "box" ? (
             <div className="space-y-4">
               {formData.services.map((service, index) => (
                 <motion.div
@@ -619,48 +780,7 @@ const ReceiptEditPage: React.FC = () => {
                 </div>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Payment Details */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <DollarSign className="w-5 h-5 mr-2 text-emerald-600" />
-            Payment Details
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-              <input
-                type="text"
-                value="UGX"
-                className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg"
-                disabled
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-              <select
-                value={formData.payment.method || ""}
-                onChange={(e) => handleInputChange("payment", "method", e.target.value || undefined)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              >
-                <option value="">Select method</option>
-                <option value="cash">Cash</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="mobile_money">Mobile Money</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-              <input
-                type="date"
-                value={formData.payment.dueDate}
-                onChange={(e) => handleInputChange("payment", "dueDate", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              />
-            </div>
-          </div>
+          ) : null}
         </div>
 
         {/* Additional Notes */}

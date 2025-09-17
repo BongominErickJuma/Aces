@@ -292,8 +292,8 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
             </div>
           </div>
 
-          {/* Move Locations */}
-          {receipt.locations && (
+          {/* Move Locations - Only show for commitment, final, and one_time receipts */}
+          {receipt.locations && ["commitment", "final", "one_time"].includes(receipt.receiptType) && (
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Move Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -337,8 +337,8 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
             </div>
           )}
 
-          {/* Services */}
-          {receipt.services && receipt.services.length > 0 && (
+          {/* Services - Only show for box receipts */}
+          {receipt.services && receipt.services.length > 0 && receipt.receiptType === "box" && (
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Services</h3>
               <div className="overflow-x-auto">
@@ -380,6 +380,77 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
           transition={{ delay: 0.4 }}
           className="bg-white rounded-xl shadow-sm border border-gray-200"
         >
+          {/* Receipt Type Specific Payment Details */}
+          {receipt.receiptType === "commitment" && (
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Commitment Receipt Details</h3>
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium">Commitment Fee Paid</p>
+                    <p className="text-blue-900 font-bold text-lg">
+                      {formatAmount(receipt.commitmentFeePaid, receipt.payment.currency)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium">Total Amount for Moving</p>
+                    <p className="text-blue-900 font-bold text-lg">
+                      {formatAmount(receipt.totalMovingAmount, receipt.payment.currency)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium">Balance Due</p>
+                    <p className="text-blue-900 font-bold text-lg">
+                      {formatAmount((receipt.totalMovingAmount || 0) - (receipt.commitmentFeePaid || 0), receipt.payment.currency)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {receipt.receiptType === "final" && (
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Final Receipt Details</h3>
+              <div className="bg-green-50 rounded-lg p-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-green-600 font-medium">Commitment Fee Paid (Previously)</p>
+                    <p className="text-green-900 font-bold text-lg">
+                      {formatAmount(receipt.commitmentFeePaid, receipt.payment.currency)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-green-600 font-medium">Final Payment Received</p>
+                    <p className="text-green-900 font-bold text-lg">
+                      {formatAmount(receipt.finalPaymentReceived, receipt.payment.currency)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-green-600 font-medium">Grand Total</p>
+                    <p className="text-green-900 font-bold text-lg">
+                      {formatAmount((receipt.commitmentFeePaid || 0) + (receipt.finalPaymentReceived || 0), receipt.payment.currency)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {receipt.receiptType === "one_time" && (
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">One Time Payment Receipt Details</h3>
+              <div className="bg-orange-50 rounded-lg p-4">
+                <div>
+                  <p className="text-sm text-orange-600 font-medium">Total Amount for Moving</p>
+                  <p className="text-orange-900 font-bold text-xl">
+                    {formatAmount(receipt.totalMovingAmount, receipt.payment.currency)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Commitment Fee */}
           {receipt.commitmentFee && (
             <div className="p-6 border-b border-gray-200">

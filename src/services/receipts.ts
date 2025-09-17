@@ -84,6 +84,10 @@ export interface Receipt {
   payment: ReceiptPayment;
   signatures: ReceiptSignatures;
   commitmentFee?: CommitmentFee;
+  // Receipt type specific fields
+  commitmentFeePaid?: number;
+  totalMovingAmount?: number;
+  finalPaymentReceived?: number;
   version: number;
   versions: ReceiptVersion[];
   createdBy: {
@@ -104,7 +108,7 @@ export interface CreateReceiptData {
   quotationId?: string;
   client: ReceiptClient;
   locations?: ReceiptLocations;
-  services: ReceiptService[];
+  services?: ReceiptService[];
   payment: {
     currency: "UGX" | "USD";
     method?: "cash" | "bank_transfer" | "mobile_money";
@@ -112,6 +116,9 @@ export interface CreateReceiptData {
   };
   signatures?: Partial<ReceiptSignatures>;
   commitmentFee?: CommitmentFee;
+  commitmentFeePaid?: number; // For commitment and final receipts
+  totalMovingAmount?: number; // For commitment and one_time receipts
+  finalPaymentReceived?: number; // For final receipts
   notes?: string;
 }
 

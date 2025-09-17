@@ -127,58 +127,46 @@ const CreatePage: React.FC = () => {
 
   return (
     <PageLayout title="Create">
-      <div className="mx-auto space-y-6">
+      <div className="mx-auto space-y-4 lg:space-y-6">
         {/* Tab Navigation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 lg:p-6"
         >
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            <nav className="-mb-px flex space-x-2 lg:space-x-8" aria-label="Tabs">
               {availableTabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
 
                 return (
-                  <motion.button
+                  <button
                     key={tab.id}
                     onClick={() => handleTabChange(tab.id)}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                    className={`group inline-flex items-center py-3 lg:py-4 px-2 lg:px-1 border-b-2 font-medium text-sm transition-colors duration-200 min-w-0 ${
                       isActive
                         ? "border-aces-green text-aces-green"
                         : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                     }`}
                     disabled={isLoading}
                   >
-                    <Icon
-                      className={`mr-2 w-5 h-5 ${
-                        isActive ? "text-aces-green" : "text-gray-400 group-hover:text-gray-500"
-                      }`}
-                    />
-                    {tab.label}
-                  </motion.button>
+                    {!isActive && (
+                      <Icon
+                        className={`w-5 h-5 lg:mr-2 text-gray-400 group-hover:text-gray-500`}
+                      />
+                    )}
+                    <span className={isActive ? "inline" : "hidden lg:inline"}>{tab.label}</span>
+                  </button>
                 );
               })}
             </nav>
           </div>
 
           {/* Tab Content */}
-          <div className="mt-6">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.2 }}
-              >
-                {renderTabContent()}
-              </motion.div>
-            </AnimatePresence>
+          <div className="mt-4 lg:mt-6">
+            {renderTabContent()}
           </div>
         </motion.div>
 

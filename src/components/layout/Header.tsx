@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -27,6 +27,7 @@ const Header: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentNotifications, setRecentNotifications] = useState<Notification[]>([]);
   const [notificationLoading, setNotificationLoading] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   // Load notifications data
   const loadNotificationData = useCallback(async () => {
@@ -59,6 +60,23 @@ const Header: React.FC = () => {
       loadNotificationData();
     }
   }, [isNotificationOpen, loadNotificationData]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isNotificationOpen && notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setIsNotificationOpen(false);
+      }
+    };
+
+    if (isNotificationOpen) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isNotificationOpen]);
 
   const handleLogout = async () => {
     try {
@@ -179,9 +197,16 @@ const Header: React.FC = () => {
           {/* Right Section */}
           <div className="flex items-center space-x-1 sm:space-x-2 xl:space-x-3">
             {/* Notifications */}
-            <motion.div whileHover={{ scale: 1.1 }} className="relative">
+            <motion.div whileHover={{ scale: 1.1 }} className="relative" ref={notificationRef}>
+              {/* Desktop: Show dropdown, Mobile/Tablet: Navigate to page */}
               <button
-                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                onClick={() => {
+                  if (window.innerWidth >= 1200) {
+                    setIsNotificationOpen(!isNotificationOpen);
+                  } else {
+                    navigate('/notifications');
+                  }
+                }}
                 className="p-1.5 xl:p-2 text-gray-600 hover:text-aces-green hover:bg-gray-50 rounded-lg transition-colors"
               >
                 <Bell size={16} className="xl:w-[18px] xl:h-[18px]" />
@@ -192,25 +217,18 @@ const Header: React.FC = () => {
                 )}
               </button>
 
-              {/* Notification Dropdown */}
+              {/* Notification Dropdown - Only show on desktop (xl breakpoint = 1280px+) */}
               <AnimatePresence>
                 {isNotificationOpen && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9, y: -10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                    className="absolute right-0 mt-2 w-72 sm:w-80 xl:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden"
+                    className="hidden xl:block absolute right-0 mt-2 w-96 max-w-md bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden"
                   >
                     {/* Header */}
                     <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-                      <Link
-                        to="/notifications"
-                        onClick={() => setIsNotificationOpen(false)}
-                        className="text-xs text-aces-green hover:text-aces-green/80 font-medium"
-                      >
-                        View All
-                      </Link>
                     </div>
 
                     {/* Loading */}
@@ -227,10 +245,9 @@ const Header: React.FC = () => {
                     ) : (
                       <div className="max-h-80 overflow-y-auto">
                         {recentNotifications.map((notification) => (
-                          <motion.div
+                          <div
                             key={notification._id}
-                            whileHover={{ backgroundColor: "rgba(249, 250, 251, 1)" }}
-                            className="px-4 py-3 border-b border-gray-100 last:border-b-0 cursor-pointer"
+                            className="px-4 py-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors"
                             onClick={() => handleNotificationClick(notification)}
                           >
                             <div className="flex items-start gap-3">
@@ -252,10 +269,10 @@ const Header: React.FC = () => {
                                 <h4 className="text-sm font-medium text-gray-900 truncate">{notification.title}</h4>
                                 <p className="text-xs text-gray-600 mt-1 line-clamp-2">{notification.message}</p>
                                 <div className="flex items-center justify-between mt-2">
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-gray-500 truncate">
                                     {notification.timeAgo || new Date(notification.createdAt).toLocaleDateString()}
                                   </span>
-                                  <div className="flex items-center gap-1">
+                                  <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                                     {notification.actionUrl && <ExternalLink className="w-3 h-3 text-gray-400" />}
                                     <button
                                       onClick={(e) => {
@@ -271,7 +288,7 @@ const Header: React.FC = () => {
                                 </div>
                               </div>
                             </div>
-                          </motion.div>
+                          </div>
                         ))}
                       </div>
                     )}

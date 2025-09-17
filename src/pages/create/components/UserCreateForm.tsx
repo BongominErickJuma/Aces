@@ -119,7 +119,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* Error Alert */}
       {error && (
         <motion.div
@@ -170,7 +170,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
       )}
 
       {/* Progress Steps */}
-      <div className="bg-gray-50 rounded-lg p-4">
+      <div className="bg-gray-50 rounded-lg p-3 lg:p-4">
         <div className="flex items-center justify-between">
           {steps.map((step, index) => {
             const Icon = step.icon;
@@ -180,7 +180,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
             return (
               <div key={step.id} className="flex items-center">
                 <div
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center space-x-1 lg:space-x-2 px-2 lg:px-3 py-2 rounded-lg transition-colors ${
                     isActive
                       ? "bg-aces-green text-white"
                       : isCompleted
@@ -189,10 +189,10 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
                   }`}
                 >
                   <Icon className="w-4 h-4" />
-                  <span className="text-sm font-medium">{step.title}</span>
+                  <span className="text-xs lg:text-sm font-medium hidden lg:inline">{step.title}</span>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-8 h-0.5 mx-2 ${isCompleted ? "bg-green-300" : "bg-gray-300"}`} />
+                  <div className={`w-4 lg:w-8 h-0.5 mx-1 lg:mx-2 ${isCompleted ? "bg-green-300" : "bg-gray-300"}`} />
                 )}
               </div>
             );
@@ -200,22 +200,17 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
         </div>
       </div>
 
-      <form className="space-y-8">
+      <form className="space-y-6 lg:space-y-8">
         {/* Step 1: Basic Information */}
         {currentStep === 1 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             <div className="flex items-center space-x-2 mb-4">
               <User className="w-5 h-5 text-aces-green" />
               <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                 <input
                   type="text"
@@ -229,7 +224,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
                 {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName.message}</p>}
               </div>
 
-              <div className="md:col-span-2">
+              <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
                 <input
                   type="email"
@@ -250,7 +245,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
             {/* Role Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">User Role *</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {[
                   { value: "user", label: "Standard User", adminOnly: false },
                   { value: "admin", label: "Administrator", adminOnly: false },
@@ -276,23 +271,18 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
               </div>
               {errors.role && <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>}
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Step 2: Contact Information */}
         {currentStep === 2 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             <div className="flex items-center space-x-2 mb-4">
               <Phone className="w-5 h-5 text-aces-green" />
               <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Primary Phone Number</label>
                 <input
@@ -339,17 +329,12 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Step 3: Account Settings */}
         {currentStep === 3 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             <div className="flex items-center space-x-2 mb-4">
               <Settings className="w-5 h-5 text-aces-green" />
               <h3 className="text-lg font-semibold text-gray-900">Account Settings</h3>
@@ -436,18 +421,19 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Navigation Buttons */}
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-          <div className="flex items-center space-x-3">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between pt-6 border-t border-gray-200 space-y-4 lg:space-y-0">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center space-y-3 lg:space-y-0 lg:space-x-3">
             {currentStep > 1 && (
               <Button
                 type="button"
                 onClick={() => setCurrentStep(currentStep - 1)}
                 variant="secondary"
                 disabled={isLoading || !!success}
+                className="w-full lg:w-auto"
               >
                 Previous
               </Button>
@@ -457,7 +443,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
               onClick={onCancel}
               variant="secondary"
               disabled={isLoading}
-              className="flex items-center space-x-1"
+              className="flex items-center space-x-1 w-full lg:w-auto justify-center"
             >
               <span>Cancel</span>
             </Button>
@@ -465,7 +451,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
 
           <div className="flex items-center space-x-3">
             {currentStep < 3 ? (
-              <Button type="button" onClick={handleNextStep} variant="primary" disabled={isLoading || !!success}>
+              <Button type="button" onClick={handleNextStep} variant="primary" disabled={isLoading || !!success} className="w-full lg:w-auto">
                 Next
               </Button>
             ) : (
@@ -474,7 +460,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
                 onClick={handleCreateUser}
                 disabled={isLoading || !!success}
                 variant="primary"
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 w-full lg:w-auto justify-center"
               >
                 <span>{isLoading ? "Creating..." : success ? "User Created!" : "Create User"}</span>
               </Button>

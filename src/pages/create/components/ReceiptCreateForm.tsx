@@ -29,6 +29,8 @@ interface ReceiptCreateFormProps {
 interface FormData extends CreateReceiptData {
   commitmentFeePaid?: number;
   totalMovingAmount?: number;
+  finalPaymentReceived?: number;
+  grandTotal?: number;
 }
 
 const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
@@ -132,7 +134,12 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
   }, [fromQuotationId, setIsLoading, setValue]);
 
   // Calculate totals
-  const totalAmount = watchedServices?.reduce((sum, service) => sum + (service.quantity * service.amount || 0), 0) || 0;
+  const totalAmount =
+    watchedServices?.reduce((sum, service) => {
+      const quantity = Number(service.quantity) || 0;
+      const amount = Number(service.amount) || 0;
+      return sum + quantity * amount;
+    }, 0) || 0;
 
   const onSubmit = async (data: FormData) => {
     // Prevent submission if not on the final step
@@ -171,8 +178,14 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
         notes: data.notes || undefined,
       };
 
-      // Handle commitment receipts specially
-      let receiptData: CreateReceiptData & { commitmentFeePaid?: number; totalMovingAmount?: number };
+      // Handle different receipt types
+      let receiptData: CreateReceiptData & {
+        commitmentFeePaid?: number;
+        totalMovingAmount?: number;
+        finalPaymentReceived?: number;
+        totalAmountForMoving?: number;
+      };
+
       if (data.receiptType === "commitment") {
         // Add commitment-specific fields
         receiptData = {
@@ -181,9 +194,24 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
           commitmentFeePaid: Number(data.commitmentFeePaid) || 0,
           totalMovingAmount: Number(data.totalMovingAmount) || 0,
         };
+      } else if (data.receiptType === "final") {
+        // Add final receipt-specific fields
+        receiptData = {
+          ...baseReceiptData,
+          services: [], // No services for final receipts
+          commitmentFeePaid: Number(data.commitmentFeePaid) || 0,
+          finalPaymentReceived: Number(data.finalPaymentReceived) || 0,
+        };
+      } else if (data.receiptType === "one_time") {
+        // Add one time payment-specific fields
+        receiptData = {
+          ...baseReceiptData,
+          services: [], // No services for one time payments
+          totalMovingAmount: Number(data.totalMovingAmount) || 0,
+        };
       } else {
-        // Include total field for services - backend validation requires it
-        const services = data.services.map((service) => ({
+        // Box receipts - Include services
+        const services = (data.services || []).map((service) => ({
           description: service.description,
           quantity: Number(service.quantity),
           amount: Number(service.amount),
@@ -251,12 +279,23 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
   const steps = [
     { id: 1, title: "Receipt Type", icon: FileText },
     { id: 2, title: "Client Info", icon: User },
-    { id: 3, title: "Services", icon: Package },
-    { id: 4, title: "Payment", icon: CreditCard },
+    {
+      id: 3,
+      title:
+        receiptType === "commitment"
+          ? "Commitment"
+          : receiptType === "final"
+          ? "Final Payment"
+          : receiptType === "one_time"
+          ? "Payment"
+          : "Services",
+      icon: Package,
+    },
+    { id: 4, title: "Review", icon: CreditCard },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* Error Alert */}
       {error && (
         <motion.div
@@ -297,7 +336,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
       )}
 
       {/* Progress Steps */}
-      <div className="bg-gray-50 rounded-lg p-4">
+      <div className="bg-gray-50 rounded-lg p-3 lg:p-4">
         <div className="flex items-center justify-between">
           {steps.map((step, index) => {
             const Icon = step.icon;
@@ -307,7 +346,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
             return (
               <div key={step.id} className="flex items-center">
                 <div
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center space-x-1 lg:space-x-2 px-2 lg:px-3 py-2 rounded-lg transition-colors ${
                     isActive
                       ? "bg-aces-green text-white"
                       : isCompleted
@@ -316,10 +355,10 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                   }`}
                 >
                   <Icon className="w-4 h-4" />
-                  <span className="text-sm font-medium">{step.title}</span>
+                  <span className="text-xs lg:text-sm font-medium hidden lg:inline">{step.title}</span>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-8 h-0.5 mx-2 ${isCompleted ? "bg-green-300" : "bg-gray-300"}`} />
+                  <div className={`w-4 lg:w-8 h-0.5 mx-1 lg:mx-2 ${isCompleted ? "bg-green-300" : "bg-gray-300"}`} />
                 )}
               </div>
             );
@@ -327,15 +366,10 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 lg:space-y-8">
         {/* Step 1: Receipt Type Selection */}
         {currentStep === 1 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             <div className="flex items-center space-x-2 mb-4">
               <FileText className="w-5 h-5 text-aces-green" />
               <h3 className="text-lg font-semibold text-gray-900">Receipt Type</h3>
@@ -344,7 +378,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
             {/* Receipt Type Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Receipt Type *</label>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 {[
                   { value: "box", label: "Box Receipt", description: "Standard moving box receipt" },
                   { value: "commitment", label: "Commitment", description: "Commitment fee receipt" },
@@ -367,23 +401,18 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
               </div>
               {errors.receiptType && <p className="text-red-500 text-sm mt-1">{errors.receiptType.message}</p>}
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Step 2: Client Information */}
         {currentStep === 2 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             <div className="flex items-center space-x-2 mb-4">
               <User className="w-5 h-5 text-aces-green" />
               <h3 className="text-lg font-semibold text-gray-900">Client Information</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Client Name *</label>
                 <input
@@ -427,71 +456,80 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
               </div>
             </div>
 
-            {/* Location Information */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h4 className="text-md font-semibold text-gray-900 mb-4 flex items-center">
-                <MapPin className="w-4 h-4 mr-2" />
-                Location Details
-              </h4>
+            {/* Location Information - Only shown for commitment, final, and one_time receipts */}
+            {receiptType !== "box" && (
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-4 flex items-center">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Location Details
+                </h4>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">From Location *</label>
+                    <textarea
+                      {...register("locations.from", {
+                        required: "From location is required",
+                      })}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                      placeholder="Pickup location"
+                    />
+                    {errors.locations?.from && (
+                      <p className="text-red-500 text-sm mt-1">{errors.locations.from.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">To Location *</label>
+                    <textarea
+                      {...register("locations.to", {
+                        required: "To location is required",
+                      })}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                      placeholder="Delivery location"
+                    />
+                    {errors.locations?.to && <p className="text-red-500 text-sm mt-1">{errors.locations.to.message}</p>}
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">From Location *</label>
-                  <textarea
-                    {...register("locations.from", { required: "From location is required" })}
-                    rows={2}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Moving Date *</label>
+                  <input
+                    type="date"
+                    {...register("locations.movingDate", {
+                      required: "Moving date is required",
+                    })}
+                    defaultValue={new Date().toISOString().split("T")[0]}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                    placeholder="Pickup location"
                   />
-                  {errors.locations?.from && (
-                    <p className="text-red-500 text-sm mt-1">{errors.locations.from.message}</p>
+                  {errors.locations?.movingDate && (
+                    <p className="text-red-500 text-sm mt-1">{errors.locations.movingDate.message}</p>
                   )}
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">To Location *</label>
-                  <textarea
-                    {...register("locations.to", { required: "To location is required" })}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                    placeholder="Delivery location"
-                  />
-                  {errors.locations?.to && <p className="text-red-500 text-sm mt-1">{errors.locations.to.message}</p>}
-                </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Moving Date *</label>
-                <input
-                  type="date"
-                  {...register("locations.movingDate", { required: "Moving date is required" })}
-                  defaultValue={new Date().toISOString().split("T")[0]}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                />
-                {errors.locations?.movingDate && (
-                  <p className="text-red-500 text-sm mt-1">{errors.locations.movingDate.message}</p>
-                )}
-              </div>
-            </div>
-          </motion.div>
+            )}
+          </div>
         )}
 
         {/* Step 3: Services */}
         {currentStep === 3 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
                 <Package className="w-5 h-5 text-aces-green" />
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {receiptType === "commitment" ? "Commitment Receipt Details" : "Services"}
+                  {receiptType === "commitment"
+                    ? "Commitment Receipt Details"
+                    : receiptType === "final"
+                    ? "Final Receipt Details"
+                    : receiptType === "one_time"
+                    ? "One Time Payment Details"
+                    : "Services"}
                 </h3>
               </div>
-              {receiptType !== "commitment" && (
+              {receiptType === "box" && (
                 <Button
                   type="button"
                   onClick={addService}
@@ -504,13 +542,13 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
               )}
             </div>
 
-            {/* Commitment Receipt - Special Fields */}
+            {/* Receipt Type Specific Fields */}
             {receiptType === "commitment" ? (
               <div className="space-y-4">
                 <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
                   <h4 className="text-md font-semibold text-gray-900 mb-4">Commitment Fee Information</h4>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Commitment Fee Paid ({watchedCurrency}) *
@@ -557,7 +595,9 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-lg font-medium text-gray-700">Balance Due:</span>
                       <span className="text-xl font-bold text-aces-green">
-                        {formatCurrency((watch("totalMovingAmount") || 0) - (watch("commitmentFeePaid") || 0))}
+                        {formatCurrency(
+                          Number(watch("totalMovingAmount") || 0) - Number(watch("commitmentFeePaid") || 0)
+                        )}
                       </span>
                     </div>
                   </div>
@@ -589,7 +629,151 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                       <tr>
                         <td className="py-2 text-sm text-gray-600 font-medium">Balance Due</td>
                         <td className="py-2 text-sm text-right font-bold text-red-600">
-                          {formatCurrency((watch("totalMovingAmount") || 0) - (watch("commitmentFeePaid") || 0))}
+                          {formatCurrency(
+                            Number(watch("totalMovingAmount") || 0) - Number(watch("commitmentFeePaid") || 0)
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : receiptType === "final" ? (
+              <div className="space-y-4">
+                <div className="bg-green-50 rounded-lg p-6 border border-green-200">
+                  <h4 className="text-md font-semibold text-gray-900 mb-4">Final Payment Information</h4>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Commitment Fee Paid (Previously) ({watchedCurrency}) *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        {...register("commitmentFeePaid", {
+                          required: "Commitment fee amount is required",
+                          min: { value: 0, message: "Amount must be positive" },
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                        placeholder="Enter commitment fee paid previously"
+                      />
+                      {errors.commitmentFeePaid && (
+                        <p className="text-red-500 text-sm mt-1">{errors.commitmentFeePaid.message}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Final Payment Received ({watchedCurrency}) *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        {...register("finalPaymentReceived", {
+                          required: "Final payment amount is required",
+                          min: { value: 0, message: "Amount must be positive" },
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                        placeholder="Enter final payment received"
+                      />
+                      {errors.finalPaymentReceived && (
+                        <p className="text-red-500 text-sm mt-1">{errors.finalPaymentReceived.message}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Grand Total (calculated) */}
+                  <div className="mt-6 p-4 bg-white rounded-lg border">
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-medium text-gray-700">Grand Total:</span>
+                      <span className="text-xl font-bold text-aces-green">
+                        {formatCurrency(
+                          Number(watch("commitmentFeePaid") || 0) + Number(watch("finalPaymentReceived") || 0)
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Summary Table for Final Receipt */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h4 className="text-md font-semibold text-gray-900 mb-4">Receipt Summary</h4>
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 text-sm font-medium text-gray-700">Description</th>
+                        <th className="text-right py-2 text-sm font-medium text-gray-700">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b">
+                        <td className="py-2 text-sm text-gray-600">Commitment Fee Paid (Previously)</td>
+                        <td className="py-2 text-sm text-right font-semibold">
+                          {formatCurrency(watch("commitmentFeePaid") || 0)}
+                        </td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-2 text-sm text-gray-600">Final Payment Received</td>
+                        <td className="py-2 text-sm text-right font-semibold text-green-600">
+                          {formatCurrency(watch("finalPaymentReceived") || 0)}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-sm text-gray-600 font-medium">Grand Total</td>
+                        <td className="py-2 text-sm text-right font-bold text-aces-green">
+                          {formatCurrency(
+                            Number(watch("commitmentFeePaid") || 0) + Number(watch("finalPaymentReceived") || 0)
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : receiptType === "one_time" ? (
+              <div className="space-y-4">
+                <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
+                  <h4 className="text-md font-semibold text-gray-900 mb-4">One Time Payment Information</h4>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Total Amount For Moving ({watchedCurrency}) *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      {...register("totalMovingAmount", {
+                        required: "Total moving amount is required",
+                        min: { value: 0, message: "Amount must be positive" },
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                      placeholder="Enter total amount for moving"
+                    />
+                    {errors.totalMovingAmount && (
+                      <p className="text-red-500 text-sm mt-1">{errors.totalMovingAmount.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Summary Table for One Time Payment Receipt */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h4 className="text-md font-semibold text-gray-900 mb-4">Receipt Summary</h4>
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 text-sm font-medium text-gray-700">Description</th>
+                        <th className="text-right py-2 text-sm font-medium text-gray-700">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="py-2 text-sm text-gray-600 font-medium">Total Amount For Moving</td>
+                        <td className="py-2 text-sm text-right font-bold text-aces-green">
+                          {formatCurrency(Number(watch("totalMovingAmount") || 0))}
                         </td>
                       </tr>
                     </tbody>
@@ -597,13 +781,11 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                 </div>
               </div>
             ) : (
-              /* Regular Services for other receipt types */
+              /* Services for Box receipts only */
               <div className="space-y-4">
                 {fields.map((field, index) => (
-                  <motion.div
+                  <div
                     key={field.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
                     className="bg-gray-50 rounded-lg p-6 relative"
                   >
                     {fields.length > 1 && (
@@ -616,8 +798,8 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                       </button>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      <div className="lg:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Service Description *</label>
                         <textarea
                           {...register(`services.${index}.description`, {
@@ -676,12 +858,12 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                         <span className="text-sm font-medium text-gray-600">Line Total:</span>
                         <span className="text-lg font-semibold text-aces-green">
                           {formatCurrency(
-                            (watchedServices[index]?.quantity || 0) * (watchedServices[index]?.amount || 0)
+                            (watchedServices?.[index]?.quantity || 0) * (watchedServices?.[index]?.amount || 0)
                           )}
                         </span>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
 
                 {/* Total Summary for regular receipts */}
@@ -696,20 +878,15 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                 </div>
               </div>
             )}
-          </motion.div>
+          </div>
         )}
 
         {/* Step 4: Payment & Signatures */}
         {currentStep === 4 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <div className="space-y-6">
             <div className="flex items-center space-x-2 mb-4">
               <Notebook className="w-5 h-5 text-aces-green" />
-              <h3 className="text-lg font-semibold text-gray-900">Notes</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Review & Notes</h3>
             </div>
 
             {/* Notes */}
@@ -735,28 +912,40 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                   <span className="text-gray-600">Receipt Type:</span>
                   <span className="font-medium capitalize">{receiptType}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Services:</span>
-                  <span className="font-medium">{fields.length} item(s)</span>
-                </div>
+                {receiptType === "box" && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Services:</span>
+                    <span className="font-medium">{fields.length} item(s)</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center pt-2 border-t">
                   <span className="text-lg font-semibold text-gray-900">Total Amount:</span>
-                  <span className="text-xl font-bold text-aces-green">{formatCurrency(totalAmount)}</span>
+                  <span className="text-xl font-bold text-aces-green">
+                    {receiptType === "commitment" &&
+                      formatCurrency(Number(watch("totalMovingAmount") || 0) - Number(watch("commitmentFeePaid") || 0))}
+                    {receiptType === "final" &&
+                      formatCurrency(
+                        Number(watch("commitmentFeePaid") || 0) + Number(watch("finalPaymentReceived") || 0)
+                      )}
+                    {receiptType === "one_time" && formatCurrency(Number(watch("totalMovingAmount") || 0))}
+                    {receiptType === "box" && formatCurrency(totalAmount)}
+                  </span>
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Navigation Buttons */}
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-          <div className="flex items-center space-x-3">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between pt-6 border-t border-gray-200 space-y-4 lg:space-y-0">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center space-y-3 lg:space-y-0 lg:space-x-3">
             {currentStep > 1 && (
               <Button
                 type="button"
                 onClick={() => setCurrentStep(currentStep - 1)}
                 variant="secondary"
                 disabled={isLoading}
+                className="w-full lg:w-auto"
               >
                 Previous
               </Button>
@@ -766,7 +955,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
               onClick={onCancel}
               variant="secondary"
               disabled={isLoading}
-              className="flex items-center space-x-1"
+              className="flex items-center space-x-1 w-full lg:w-auto justify-center"
             >
               <span>Cancel</span>
             </Button>
@@ -783,11 +972,12 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                 }}
                 variant="primary"
                 disabled={isLoading}
+                className="w-full lg:w-auto"
               >
                 Next
               </Button>
             ) : (
-              <Button type="submit" disabled={isLoading} variant="primary" className="flex items-center space-x-2">
+              <Button type="submit" disabled={isLoading} variant="primary" className="flex items-center space-x-2 w-full lg:w-auto justify-center">
                 <span>{isLoading ? "Creating..." : "Create Receipt"}</span>
               </Button>
             )}
