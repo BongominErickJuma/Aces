@@ -2,7 +2,7 @@ import axios from "axios";
 import type { LoginCredentials, LoginResponse, User, TokenResponse } from "../types/auth";
 
 // API base configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = "https://aces-mover-server.onrender.com/api";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
