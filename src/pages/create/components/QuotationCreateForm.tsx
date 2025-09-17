@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import {
-  Save,
-  Plus,
   Trash2,
   Calculator,
   AlertCircle,
@@ -16,7 +14,7 @@ import {
   Package,
   DollarSign,
 } from "lucide-react";
-import { quotationsAPI, type CreateQuotationData, type Quotation } from "../../../services/quotations";
+import { quotationsAPI, type CreateQuotationData } from "../../../services/quotations";
 import { Button } from "../../../components/ui/Button";
 
 interface QuotationCreateFormProps {
@@ -25,7 +23,7 @@ interface QuotationCreateFormProps {
   setIsLoading: (loading: boolean) => void;
 }
 
-interface FormData extends CreateQuotationData {}
+type FormData = CreateQuotationData;
 
 const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isLoading, setIsLoading }) => {
   const navigate = useNavigate();
@@ -37,9 +35,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
     control,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors },
-    reset,
   } = useForm<FormData>({
     defaultValues: {
       type: "Residential",
@@ -94,7 +90,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
   const onSubmit = async (data: FormData) => {
     // Prevent submission if not on the final step
     if (currentStep !== 4) {
-      console.warn('Form submitted but not on step 4, current step:', currentStep);
+      console.warn("Form submitted but not on step 4, current step:", currentStep);
       return;
     }
 
@@ -118,8 +114,8 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
 
       const response = await quotationsAPI.createQuotation(quotationData);
       // Navigate to quotations list after successful creation
-      navigate('/quotations', {
-        state: { message: `Quotation ${response.data.quotation.quotationNumber} created successfully` }
+      navigate("/quotations", {
+        state: { message: `Quotation ${response.data.quotation.quotationNumber} created successfully` },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create quotation");
@@ -459,7 +455,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                       {...register(`services.${index}.description`, {
                         required: "Service description is required",
                         minLength: { value: 1, message: "Description must have at least 1 character" },
-                        maxLength: { value: 500, message: "Description cannot exceed 500 characters" }
+                        maxLength: { value: 500, message: "Description cannot exceed 500 characters" },
                       })}
                       rows={2}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
@@ -543,7 +539,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                     <span className="font-medium">{formatCurrency(subtotal)}</span>
                   </div>
 
-                  {watchedDiscount > 0 && (
+                  {watchedDiscount && watchedDiscount > 0 && (
                     <div className="flex justify-between items-center py-2 text-red-600">
                       <span>Discount ({watchedDiscount}%)</span>
                       <span>-{formatCurrency(discountAmount)}</span>
@@ -555,7 +551,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                     <span className="font-medium">{formatCurrency(taxableAmount)}</span>
                   </div>
 
-                  {watchedTaxRate > 0 && (
+                  {watchedTaxRate && watchedTaxRate > 0 && (
                     <div className="flex justify-between items-center py-2">
                       <span className="text-gray-600">Tax ({watchedTaxRate}%)</span>
                       <span className="font-medium">{formatCurrency(taxAmount)}</span>

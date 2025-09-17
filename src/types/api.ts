@@ -6,7 +6,7 @@ export interface ApiResponse<T> {
   timestamp: string;
 }
 
-export interface PaginatedResponse<T> extends ApiResponse<{
+export type PaginatedResponse<T> = ApiResponse<{
   items: T;
   pagination: {
     page: number;
@@ -14,7 +14,7 @@ export interface PaginatedResponse<T> extends ApiResponse<{
     total: number;
     totalPages: number;
   };
-}> {}
+}>;
 
 export interface ApiError {
   success: false;

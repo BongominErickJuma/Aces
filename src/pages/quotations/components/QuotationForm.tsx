@@ -11,7 +11,7 @@ interface QuotationFormProps {
   onCancel: () => void;
 }
 
-interface FormData extends CreateQuotationData {}
+type FormData = CreateQuotationData;
 
 const QuotationForm: React.FC<QuotationFormProps> = ({ quotation, onSave, onCancel }) => {
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,6 @@ const QuotationForm: React.FC<QuotationFormProps> = ({ quotation, onSave, onCanc
     control,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors },
     reset,
   } = useForm<FormData>({
@@ -158,7 +157,17 @@ const QuotationForm: React.FC<QuotationFormProps> = ({ quotation, onSave, onCanc
 
       let result;
       if (isEditing && quotation) {
-        result = await quotationsAPI.updateQuotation(quotation._id, data);
+        // For updates, include calculated pricing fields
+        const updateData = {
+          ...data,
+          pricing: {
+            ...data.pricing,
+            subtotal: calculations.subtotal,
+            taxAmount: calculations.taxAmount,
+            totalAmount: calculations.total,
+          },
+        };
+        result = await quotationsAPI.updateQuotation(quotation._id, updateData);
       } else {
         result = await quotationsAPI.createQuotation(data);
       }

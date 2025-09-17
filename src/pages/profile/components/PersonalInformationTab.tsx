@@ -1,7 +1,7 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Mail, Phone, MapPin, Save } from 'lucide-react';
-import type { User } from '../../../types/auth';
+import React from "react";
+import { motion } from "framer-motion";
+import { Mail, Phone, MapPin, Save } from "lucide-react";
+import type { User } from "../../../types/auth";
 
 interface PersonalInformationTabProps {
   profileData: User;
@@ -14,7 +14,7 @@ const PersonalInformationTab: React.FC<PersonalInformationTabProps> = ({
   profileData,
   setProfileData,
   onSave,
-  saving
+  saving,
 }) => {
   const isFormValid = () => {
     return profileData.fullName && profileData.email && profileData.phonePrimary && profileData.emergencyContact;
@@ -27,10 +27,10 @@ const PersonalInformationTab: React.FC<PersonalInformationTabProps> = ({
 
   // Parse fullName into first and last name for display
   const getFirstLastName = () => {
-    const nameParts = profileData.fullName?.split(' ') || [];
+    const nameParts = profileData.fullName?.split(" ") || [];
     return {
-      firstName: nameParts[0] || '',
-      lastName: nameParts.slice(1).join(' ') || ''
+      firstName: nameParts[0] || "",
+      lastName: nameParts.slice(1).join(" ") || "",
     };
   };
 
@@ -46,9 +46,7 @@ const PersonalInformationTab: React.FC<PersonalInformationTabProps> = ({
       <h3 className="text-lg font-semibold text-gray-900 mb-6">Personal Information</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            First Name *
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
           <input
             type="text"
             value={firstName}
@@ -58,9 +56,7 @@ const PersonalInformationTab: React.FC<PersonalInformationTabProps> = ({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Last Name *
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
           <input
             type="text"
             value={lastName}
@@ -70,14 +66,12 @@ const PersonalInformationTab: React.FC<PersonalInformationTabProps> = ({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email Address *
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
           <div className="relative">
             <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
               type="email"
-              value={profileData.email || ''}
+              value={profileData.email || ""}
               onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
               placeholder="Enter email address"
@@ -85,14 +79,12 @@ const PersonalInformationTab: React.FC<PersonalInformationTabProps> = ({
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Primary Phone *
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Primary Phone *</label>
           <div className="relative">
             <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
               type="tel"
-              value={profileData.phonePrimary || ''}
+              value={profileData.phonePrimary || ""}
               onChange={(e) => setProfileData({ ...profileData, phonePrimary: e.target.value })}
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
               placeholder="Enter primary phone number"
@@ -100,14 +92,12 @@ const PersonalInformationTab: React.FC<PersonalInformationTabProps> = ({
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Secondary Phone
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Secondary Phone</label>
           <div className="relative">
             <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
               type="tel"
-              value={profileData.phoneSecondary || ''}
+              value={profileData.phoneSecondary || ""}
               onChange={(e) => setProfileData({ ...profileData, phoneSecondary: e.target.value })}
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
               placeholder="Enter secondary phone number"
@@ -115,14 +105,12 @@ const PersonalInformationTab: React.FC<PersonalInformationTabProps> = ({
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Emergency Contact *
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact *</label>
           <div className="relative">
             <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
               type="tel"
-              value={profileData.emergencyContact || ''}
+              value={profileData.emergencyContact || ""}
               onChange={(e) => setProfileData({ ...profileData, emergencyContact: e.target.value })}
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
               placeholder="Enter emergency contact number"
@@ -130,13 +118,11 @@ const PersonalInformationTab: React.FC<PersonalInformationTabProps> = ({
           </div>
         </div>
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Address
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
           <div className="relative">
             <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <textarea
-              value={profileData.address || ''}
+              value={profileData.address || ""}
               onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
               rows={3}
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
@@ -157,7 +143,7 @@ const PersonalInformationTab: React.FC<PersonalInformationTabProps> = ({
           ) : (
             <Save className="w-4 h-4" />
           )}
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? "Saving..." : "Save Changes"}
         </button>
       </div>
     </motion.div>

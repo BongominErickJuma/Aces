@@ -1,39 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { BarChart3, Users, FileText, TrendingUp, Calendar } from "lucide-react";
-import { adminAPI, type UserPerformance, type DocumentStats, type DashboardStats } from "../../../services/admin";
+import { adminAPI, type UserPerformance, type DashboardStats } from "../../../services/admin";
+// import type { NotificationStatsResponse } from "../../../types/notification";
 
 const ReportsTab: React.FC = () => {
   const [userPerformance, setUserPerformance] = useState<UserPerformance[]>([]);
-  const [documentStats, setDocumentStats] = useState<DocumentStats | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
-  const [notificationStats, setNotificationStats] = useState<any>(null);
+  // const [notificationStats, setNotificationStats] = useState<NotificationStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState("30d");
-  const [selectedGranularity, setSelectedGranularity] = useState("daily");
 
-  useEffect(() => {
-    fetchReports();
-  }, [selectedPeriod, selectedGranularity]);
-
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
 
-      const [performanceData, statsData, dashboardData, notificationData] = await Promise.all([
+      const [performanceData, dashboardData] = await Promise.all([
         adminAPI.getUserPerformanceReport({ period: selectedPeriod }).catch((err) => {
           console.error("User performance error:", err);
           return { data: { performance: [] } };
         }),
-        adminAPI
-          .getDocumentStatsReport({
-            period: selectedPeriod,
-            granularity: selectedGranularity,
-          })
-          .catch((err) => {
-            console.error("Document stats error:", err);
-            return null;
-          }),
         adminAPI.getDashboardStats({ period: selectedPeriod }).catch((err) => {
           console.error("Dashboard stats error:", err);
           return null;
@@ -45,27 +31,24 @@ const ReportsTab: React.FC = () => {
       ]);
 
       setUserPerformance(performanceData.data.performance || []);
-      setDocumentStats(statsData);
       setDashboardStats(dashboardData);
-      setNotificationStats(notificationData?.data || null);
+      // setNotificationStats(notificationData);
     } catch (error) {
       console.error("Failed to fetch reports:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPeriod]);
+
+  useEffect(() => {
+    fetchReports();
+  }, [selectedPeriod, fetchReports]);
 
   const periodOptions = [
     { value: "7d", label: "7 Days" },
     { value: "30d", label: "30 Days" },
     { value: "90d", label: "90 Days" },
     { value: "1y", label: "1 Year" },
-  ];
-
-  const granularityOptions = [
-    { value: "daily", label: "Daily" },
-    { value: "weekly", label: "Weekly" },
-    { value: "monthly", label: "Monthly" },
   ];
 
   const calculateTotalDocuments = () => {
@@ -100,38 +83,21 @@ const ReportsTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Period and Granularity Filters */}
+      {/* Period Filter */}
       <div className="flex flex-wrap gap-4 items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Period</label>
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-aces-green focus:border-aces-green"
-            >
-              {periodOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Granularity</label>
-            <select
-              value={selectedGranularity}
-              onChange={(e) => setSelectedGranularity(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-aces-green focus:border-aces-green"
-            >
-              {granularityOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Period</label>
+          <select
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-aces-green focus:border-aces-green"
+          >
+            {periodOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <button
@@ -285,7 +251,7 @@ const ReportsTab: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {userPerformance.map((user, index) => (
+              {userPerformance.map((user) => (
                 <tr key={user.user._id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-3 px-4">
                     <div>

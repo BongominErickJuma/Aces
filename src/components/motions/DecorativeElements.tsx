@@ -7,10 +7,10 @@ interface DecorativeElementsProps {
   showBottomLeft?: boolean;
 }
 
-const DecorativeElements: React.FC<DecorativeElementsProps> = ({ 
+const DecorativeElements: React.FC<DecorativeElementsProps> = ({
   className = "",
   showTopRight = true,
-  showBottomLeft = true
+  showBottomLeft = true,
 }) => {
   return (
     <>

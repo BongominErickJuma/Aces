@@ -31,9 +31,10 @@ const ForgotPasswordPage: React.FC = () => {
     try {
       await api.post("/auth/forgot-password", { email: data.email });
       setIsSuccess(true);
-    } catch (err: any) {
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
       setError(
-        err.response?.data?.error?.message ||
+        axiosError.response?.data?.error?.message ||
         "Something went wrong. Please try again."
       );
     } finally {

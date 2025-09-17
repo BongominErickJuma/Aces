@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Lock, Eye, EyeOff } from 'lucide-react';
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { Lock, Eye, EyeOff } from "lucide-react";
 
 interface PasswordChangeData {
   currentPassword: string;
@@ -13,31 +13,28 @@ interface SecuritySettingsTabProps {
   saving: boolean;
 }
 
-const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
-  onPasswordChange,
-  saving
-}) => {
+const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({ onPasswordChange, saving }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordData, setPasswordData] = useState<PasswordChangeData>({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
   const [errors, setErrors] = useState<Partial<PasswordChangeData>>({});
 
   const validatePassword = (password: string) => {
     const errors = [];
     if (password.length < 6) {
-      errors.push('Password must be at least 6 characters long');
+      errors.push("Password must be at least 6 characters long");
     }
     if (!/(?=.*[a-z])/.test(password)) {
-      errors.push('Password must contain at least one lowercase letter');
+      errors.push("Password must contain at least one lowercase letter");
     }
     if (!/(?=.*[A-Z])/.test(password)) {
-      errors.push('Password must contain at least one uppercase letter');
+      errors.push("Password must contain at least one uppercase letter");
     }
     if (!/(?=.*\d)/.test(password)) {
-      errors.push('Password must contain at least one number');
+      errors.push("Password must contain at least one number");
     }
     return errors;
   };
@@ -46,11 +43,11 @@ const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
     const newErrors: Partial<PasswordChangeData> = {};
 
     if (!passwordData.currentPassword) {
-      newErrors.currentPassword = 'Current password is required';
+      newErrors.currentPassword = "Current password is required";
     }
 
     if (!passwordData.newPassword) {
-      newErrors.newPassword = 'New password is required';
+      newErrors.newPassword = "New password is required";
     } else {
       const passwordErrors = validatePassword(passwordData.newPassword);
       if (passwordErrors.length > 0) {
@@ -59,9 +56,9 @@ const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
     }
 
     if (!passwordData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your new password';
+      newErrors.confirmPassword = "Please confirm your new password";
     } else if (passwordData.newPassword !== passwordData.confirmPassword) {
-      newErrors.confirmPassword = 'New passwords do not match';
+      newErrors.confirmPassword = "New passwords do not match";
     }
 
     setErrors(newErrors);
@@ -70,13 +67,13 @@ const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
       onPasswordChange({
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
-        confirmPassword: passwordData.confirmPassword
+        confirmPassword: passwordData.confirmPassword,
       });
       // Clear form on successful submission
       setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       });
     }
   };
@@ -104,13 +101,11 @@ const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
         <h4 className="text-md font-medium text-gray-800 mb-4">Change Password</h4>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Current Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 value={passwordData.currentPassword}
                 onChange={(e) => {
                   setPasswordData({ ...passwordData, currentPassword: e.target.value });
@@ -119,7 +114,7 @@ const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
                   }
                 }}
                 className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent ${
-                  errors.currentPassword ? 'border-red-300' : 'border-gray-300'
+                  errors.currentPassword ? "border-red-300" : "border-gray-300"
                 }`}
                 placeholder="Enter current password"
               />
@@ -131,19 +126,15 @@ const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            {errors.currentPassword && (
-              <p className="mt-1 text-sm text-red-600">{errors.currentPassword}</p>
-            )}
+            {errors.currentPassword && <p className="mt-1 text-sm text-red-600">{errors.currentPassword}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              New Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 value={passwordData.newPassword}
                 onChange={(e) => {
                   setPasswordData({ ...passwordData, newPassword: e.target.value });
@@ -152,27 +143,23 @@ const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
                   }
                 }}
                 className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent ${
-                  errors.newPassword ? 'border-red-300' : 'border-gray-300'
+                  errors.newPassword ? "border-red-300" : "border-gray-300"
                 }`}
                 placeholder="Enter new password"
               />
             </div>
-            {errors.newPassword && (
-              <p className="mt-1 text-sm text-red-600">{errors.newPassword}</p>
-            )}
+            {errors.newPassword && <p className="mt-1 text-sm text-red-600">{errors.newPassword}</p>}
             {passwordData.newPassword && validatePassword(passwordData.newPassword).length === 0 && (
               <p className="mt-1 text-sm text-green-600">Password strength: Good</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Confirm New Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 value={passwordData.confirmPassword}
                 onChange={(e) => {
                   setPasswordData({ ...passwordData, confirmPassword: e.target.value });
@@ -181,19 +168,15 @@ const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
                   }
                 }}
                 className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent ${
-                  errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                  errors.confirmPassword ? "border-red-300" : "border-gray-300"
                 }`}
                 placeholder="Confirm new password"
               />
             </div>
-            {errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
-            )}
+            {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
             {passwordData.confirmPassword &&
-             passwordData.newPassword === passwordData.confirmPassword &&
-             passwordData.newPassword && (
-              <p className="mt-1 text-sm text-green-600">Passwords match</p>
-            )}
+              passwordData.newPassword === passwordData.confirmPassword &&
+              passwordData.newPassword && <p className="mt-1 text-sm text-green-600">Passwords match</p>}
           </div>
 
           {/* Password Requirements */}
@@ -216,7 +199,7 @@ const SecuritySettingsTab: React.FC<SecuritySettingsTabProps> = ({
             ) : (
               <Lock className="w-4 h-4" />
             )}
-            {saving ? 'Changing...' : 'Change Password'}
+            {saving ? "Changing..." : "Change Password"}
           </button>
         </div>
       </div>

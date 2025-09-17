@@ -10,8 +10,8 @@ interface RecentDocumentsProps {
   loading?: boolean;
   onViewDocument: (type: "quotation" | "receipt", id: string) => void;
   onDownloadDocument: (type: "quotation" | "receipt", id: string) => void;
-  onDeleteDocument?: (type: "quotation" | "receipt", id: string) => void;
-  onShareDocument: (type: "quotation" | "receipt", id: string) => void;
+  onDeleteDocument?: (type: "quotation" | "receipt", id: string) => Promise<void>;
+  onShareDocument?: (type: "quotation" | "receipt", id: string) => void;
   isAdmin?: boolean;
   downloadingIds?: Set<string>;
 }
@@ -22,14 +22,20 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
   loading = false,
   onViewDocument,
   onDownloadDocument,
+  onDeleteDocument,
+  onShareDocument,
+  isAdmin = false,
   downloadingIds = new Set(),
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [documentTypeFilter, setDocumentTypeFilter] = useState<DocumentType>("all");
   const [showFilters, setShowFilters] = useState(false);
 
+  // Define combined document type
+  type CombinedDocument = (QuotationSummary & { docType: "quotation" }) | (ReceiptSummary & { docType: "receipt" });
+
   // Combine and sort documents
-  const allDocuments = [
+  const allDocuments: CombinedDocument[] = [
     ...quotations.map((q) => ({ ...q, docType: "quotation" as const })),
     ...receipts.map((r) => ({ ...r, docType: "receipt" as const })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -40,7 +46,7 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesSearch =
-        doc.client.name.toLowerCase().includes(query) ||
+        doc.client.fullName.toLowerCase().includes(query) ||
         ("quotationNumber" in doc && doc.quotationNumber.toLowerCase().includes(query)) ||
         ("receiptNumber" in doc && doc.receiptNumber.toLowerCase().includes(query));
       if (!matchesSearch) return false;
@@ -55,9 +61,9 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
     return true;
   });
 
-  const getStatusBadge = (doc: any) => {
+  const getStatusBadge = (doc: CombinedDocument) => {
     if (doc.docType === "quotation" && doc.validity?.status) {
-      const statusColors = {
+      const statusColors: Record<"active" | "expired" | "converted", string> = {
         active: "bg-green-100 text-green-800",
         expired: "bg-red-100 text-red-800",
         converted: "bg-blue-100 text-blue-800",
@@ -70,7 +76,7 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
     }
 
     if (doc.docType === "receipt" && doc.payment?.status) {
-      const statusColors = {
+      const statusColors: Record<"paid" | "partial" | "pending", string> = {
         paid: "bg-green-100 text-green-800",
         partial: "bg-yellow-100 text-yellow-800",
         pending: "bg-red-100 text-red-800",
@@ -221,7 +227,7 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-500 uppercase tracking-wide">Client</span>
-                          <span className="text-sm font-medium text-gray-700 text-right">{doc.client.name}</span>
+                          <span className="text-sm font-medium text-gray-700 text-right">{doc.client.fullName}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-500 uppercase tracking-wide">Created By</span>
@@ -237,7 +243,9 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
                             <span className="text-sm font-semibold text-gray-900 text-right">
                               {doc.docType === "quotation" && doc.pricing
                                 ? formatAmount(doc.pricing.totalAmount, doc.pricing.currency)
-                                : formatAmount(doc.payment.totalAmount, doc.payment.currency)}
+                                : doc.docType === "receipt" && doc.payment
+                                ? formatAmount(doc.payment.totalAmount, doc.payment.currency)
+                                : "N/A"}
                             </span>
                           </div>
                         ) : null}
@@ -325,7 +333,7 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{doc.client.name}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{doc.client.fullName}</td>
                         <td className="py-3 px-4 text-sm font-medium text-gray-900">
                           {doc.docType === "quotation" && doc.pricing
                             ? formatAmount(doc.pricing.totalAmount, doc.pricing.currency)

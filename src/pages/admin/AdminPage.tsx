@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, BarChart3 } from "lucide-react";
 import { PageLayout } from "../../components/layout";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import { useNavigate } from "react-router-dom";
 import UserManagement from "./components/UserManagement";
 
@@ -32,7 +32,7 @@ const AdminPage: React.FC = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case "users":
-        return <UserManagement isAdmin={user?.role === "admin"} currentUser={user} />;
+        return <UserManagement isAdmin={user?.role === "admin"} currentUser={user || undefined} />;
       // case 'settings':
       //   return <SystemSettings />;
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -68,9 +68,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
   const [userStatistics, setUserStatistics] = useState<Record<string, UserStatistics>>({});
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{
-    role: string;
-    status: string;
-  }>({ role: "", status: "" });
+    role: "admin" | "user";
+    status: "active" | "inactive" | "suspended";
+  }>({ role: "user", status: "active" });
   const [updatingUser, setUpdatingUser] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [actionModal, setActionModal] = useState<{
@@ -103,7 +103,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
     hasPrev: false,
   });
 
-  const fetchUsers = async (page: number = currentPage) => {
+  const fetchUsers = useCallback(async (page: number = currentPage) => {
     try {
       setLoading(true);
       const params = {
@@ -140,8 +140,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
 
         const newStats: Record<string, UserStatistics> = {};
         users.forEach((user: AdminUser, index: number) => {
-          if (statsResults[index]?.statistics) {
-            newStats[user._id] = statsResults[index].statistics;
+          if (statsResults[index]) {
+            newStats[user._id] = statsResults[index]!;
           }
         });
 
@@ -153,18 +153,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchQuery, roleFilter, statusFilter, currentUser]);
 
   // Fetch users when filters change (reset to page 1)
   useEffect(() => {
     setCurrentPage(1);
     fetchUsers(1);
-  }, [searchQuery, roleFilter, statusFilter]);
+  }, [searchQuery, roleFilter, statusFilter, fetchUsers]);
 
   // Fetch users when page changes
   useEffect(() => {
     fetchUsers(currentPage);
-  }, [currentPage]);
+  }, [currentPage, fetchUsers]);
 
   const handleToggleUserSelection = (userId: string) => {
     const newSelection = new Set(selectedUsers);
@@ -323,10 +323,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
 
     try {
       const response = await adminAPI.getUserStatistics(userId);
-      // The backend returns data.statistics
+      // The backend returns data.data (which contains statistics)
       setUserStatistics((prev) => ({
         ...prev,
-        [userId]: response.statistics,
+        [userId]: response,
       }));
     } catch (error) {
       console.error("Failed to fetch user statistics:", error);
@@ -340,7 +340,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
     // Reset editing state when toggling
     if (editingUser === userId) {
       setEditingUser(null);
-      setEditForm({ role: "", status: "" });
+      setEditForm({ role: "user", status: "active" });
     }
 
     // Fetch statistics when expanding a user
@@ -359,7 +359,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
 
   const handleCancelEdit = () => {
     setEditingUser(null);
-    setEditForm({ role: "", status: "" });
+    setEditForm({ role: "user", status: "active" });
   };
 
   const handleUpdateUser = async (userId: string) => {
@@ -383,7 +383,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
       );
 
       setEditingUser(null);
-      setEditForm({ role: "", status: "" });
+      setEditForm({ role: "user", status: "active" });
     } catch (error) {
       console.error("Failed to update user:", error);
       alert("Failed to update user. Please try again.");
@@ -733,7 +733,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
                           <div className="text-sm text-gray-900">
                             {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}
                           </div>
-                          {user.createdBy && (
+                          {user.createdBy && typeof user.createdBy === 'object' && (
                             <div className="text-xs text-gray-500">Added by: {user.createdBy.fullName}</div>
                           )}
                         </div>
@@ -899,9 +899,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
                                               <div className="flex justify-between items-center">
                                                 <span className="text-gray-600 text-sm">Last Active:</span>
                                                 <span className="font-semibold text-sm text-gray-700">
-                                                  {new Date(
-                                                    userStatistics[user._id].performance.lastActive
-                                                  ).toLocaleDateString()}
+                                                  {userStatistics[user._id].performance.lastActive
+                                                    ? new Date(userStatistics[user._id].performance.lastActive!).toLocaleDateString()
+                                                    : "Never"}
                                                 </span>
                                               </div>
                                             )}
@@ -950,7 +950,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
                                           <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                                           <select
                                             value={editForm.role}
-                                            onChange={(e) => setEditForm((prev) => ({ ...prev, role: e.target.value }))}
+                                            onChange={(e) => setEditForm((prev) => ({ ...prev, role: e.target.value as "admin" | "user" }))}
                                             disabled={updatingUser}
                                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-aces-green focus:border-aces-green disabled:bg-gray-100 disabled:cursor-not-allowed"
                                           >
@@ -964,7 +964,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
                                           <select
                                             value={editForm.status}
                                             onChange={(e) =>
-                                              setEditForm((prev) => ({ ...prev, status: e.target.value }))
+                                              setEditForm((prev) => ({ ...prev, status: e.target.value as "active" | "inactive" | "suspended" }))
                                             }
                                             disabled={updatingUser}
                                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-aces-green focus:border-aces-green disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -1022,7 +1022,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
                                       <div className="pt-2 border-t space-y-1 text-xs text-gray-500">
                                         <div>User ID: {user._id}</div>
                                         <div>Created: {new Date(user.createdAt).toLocaleDateString()}</div>
-                                        {user.createdBy && <div>Added by: {user.createdBy.fullName}</div>}
+                                        {user.createdBy && typeof user.createdBy === 'object' && <div>Added by: {user.createdBy.fullName}</div>}
                                       </div>
                                     </div>
                                   )}

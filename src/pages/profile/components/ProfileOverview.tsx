@@ -1,7 +1,7 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { User as UserIcon, Camera, CheckCircle, AlertCircle } from 'lucide-react';
-import type { User as UserType } from '../../../types/auth';
+import React from "react";
+import { motion } from "framer-motion";
+import { User as UserIcon, Camera, CheckCircle, AlertCircle } from "lucide-react";
+import type { User as UserType } from "../../../types/auth";
 
 interface ProfileOverviewProps {
   profileData: UserType;
@@ -9,13 +9,9 @@ interface ProfileOverviewProps {
   onAvatarUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const ProfileOverview: React.FC<ProfileOverviewProps> = ({
-  profileData,
-  avatarUploading,
-  onAvatarUpload
-}) => {
+const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profileData, avatarUploading, onAvatarUpload }) => {
   const getProfileCompletionColor = (completion: boolean) => {
-    return completion ? 'text-green-600' : 'text-red-600';
+    return completion ? "text-green-600" : "text-red-600";
   };
 
   const getCompletionPercentage = () => {
@@ -39,11 +35,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({
         <div className="relative">
           <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
             {profileData.profilePhoto?.url ? (
-              <img
-                src={profileData.profilePhoto.url}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
+              <img src={profileData.profilePhoto.url} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               <UserIcon className="w-16 h-16 text-gray-400" />
             )}
@@ -67,9 +59,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({
 
         {/* User Info */}
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            {profileData.fullName}
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{profileData.fullName}</h1>
           <p className="text-gray-600 mb-2">{profileData.email}</p>
           <div className="flex items-center gap-4 mb-4">
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
@@ -98,11 +88,12 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({
           {!profileData.profileCompleted && (
             <div className="text-sm text-gray-500">
               <p className="mb-1">Complete your profile to unlock all features</p>
-              {profileData.profileCompletionStatus?.missingFields && profileData.profileCompletionStatus.missingFields.length > 0 && (
-                <div className="text-xs text-red-600">
-                  Missing: {profileData.profileCompletionStatus.missingFields.join(', ')}
-                </div>
-              )}
+              {profileData.profileCompletionStatus?.missingFields &&
+                profileData.profileCompletionStatus.missingFields.length > 0 && (
+                  <div className="text-xs text-red-600">
+                    Missing: {profileData.profileCompletionStatus.missingFields.join(", ")}
+                  </div>
+                )}
             </div>
           )}
         </div>

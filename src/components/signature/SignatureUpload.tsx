@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Upload, Image, Check, X, AlertCircle } from 'lucide-react';
+import React, { useState, useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+import type { FileRejection } from "react-dropzone";
+import { Upload, Image, Check, X, AlertCircle } from "lucide-react";
 
 interface SignatureUploadProps {
   onUpload: (file: File) => void;
@@ -13,23 +14,23 @@ export const SignatureUpload: React.FC<SignatureUploadProps> = ({
   onUpload,
   onCancel,
   isLoading = false,
-  className
+  className,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
     setError(null);
 
     if (rejectedFiles.length > 0) {
       const rejection = rejectedFiles[0];
-      if (rejection.errors.some((e: any) => e.code === 'file-too-large')) {
-        setError('File is too large. Maximum size is 5MB.');
-      } else if (rejection.errors.some((e: any) => e.code === 'file-invalid-type')) {
-        setError('Invalid file type. Please select an image file.');
+      if (rejection.errors.some((e) => e.code === "file-too-large")) {
+        setError("File is too large. Maximum size is 5MB.");
+      } else if (rejection.errors.some((e) => e.code === "file-invalid-type")) {
+        setError("Invalid file type. Please select an image file.");
       } else {
-        setError('File upload failed. Please try again.');
+        setError("File upload failed. Please try again.");
       }
       return;
     }
@@ -44,18 +45,13 @@ export const SignatureUpload: React.FC<SignatureUploadProps> = ({
     }
   }, []);
 
-  const {
-    getRootProps,
-    getInputProps,
-    isDragActive,
-    isDragReject
-  } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']
+      "image/*": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"],
     },
     maxSize: 5 * 1024 * 1024, // 5MB
-    multiple: false
+    multiple: false,
   });
 
   const handleUpload = useCallback(() => {
@@ -74,15 +70,13 @@ export const SignatureUpload: React.FC<SignatureUploadProps> = ({
   }, [previewUrl]);
 
   return (
-    <div className={`w-full ${className || ''}`}>
+    <div className={`w-full ${className || ""}`}>
       <div className="text-center mb-4">
         <h4 className="text-md font-medium text-gray-900 flex items-center justify-center gap-2 mb-2">
           <Upload className="h-4 w-4" />
           Upload Signature Image
         </h4>
-        <p className="text-sm text-gray-600">
-          Upload a photo or scan of your handwritten signature
-        </p>
+        <p className="text-sm text-gray-600">Upload a photo or scan of your handwritten signature</p>
       </div>
 
       {/* Upload Area */}
@@ -90,11 +84,9 @@ export const SignatureUpload: React.FC<SignatureUploadProps> = ({
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors mb-4 ${
-            isDragActive && !isDragReject ? 'border-aces-green bg-green-50' : ''
-          } ${
-            isDragReject ? 'border-red-500 bg-red-50' : ''
-          } ${
-            !isDragActive ? 'border-gray-300 hover:border-gray-400 hover:bg-gray-50' : ''
+            isDragActive && !isDragReject ? "border-aces-green bg-green-50" : ""
+          } ${isDragReject ? "border-red-500 bg-red-50" : ""} ${
+            !isDragActive ? "border-gray-300 hover:border-gray-400 hover:bg-gray-50" : ""
           }`}
         >
           <input {...getInputProps()} />
@@ -108,12 +100,8 @@ export const SignatureUpload: React.FC<SignatureUploadProps> = ({
               )
             ) : (
               <>
-                <p className="text-lg font-medium text-gray-900">
-                  Drag & drop your signature image
-                </p>
-                <p className="text-sm text-gray-600">
-                  or click to browse files
-                </p>
+                <p className="text-lg font-medium text-gray-900">Drag & drop your signature image</p>
+                <p className="text-sm text-gray-600">or click to browse files</p>
               </>
             )}
           </div>
@@ -182,7 +170,7 @@ export const SignatureUpload: React.FC<SignatureUploadProps> = ({
             className="px-4 py-2 text-sm font-medium text-white bg-aces-green border border-transparent rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-aces-green disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <Check className="h-4 w-4" />
-            {isLoading ? 'Uploading...' : 'Upload Signature'}
+            {isLoading ? "Uploading..." : "Upload Signature"}
           </button>
         </div>
       </div>

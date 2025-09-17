@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Download,
-  Receipt,
   FileText,
   Calendar,
   User,
@@ -83,27 +82,27 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
+    const fetchQuotation = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const { api } = await import("../../../services/api");
+        const response = await api.get(`/quotations/${quotationId}`);
+
+        // Extract quotation from nested response structure
+        const quotationData =
+          response.data.data?.quotation || response.data.quotation || response.data.data || response.data;
+        setQuotation(quotationData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchQuotation();
   }, [quotationId]);
-
-  const fetchQuotation = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { api } = await import("../../../services/api");
-      const response = await api.get(`/quotations/${quotationId}`);
-
-      // Extract quotation from nested response structure
-      const quotationData =
-        response.data.data?.quotation || response.data.quotation || response.data.data || response.data;
-      setQuotation(quotationData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDownload = async () => {
     if (!quotation || downloading) return;
@@ -128,17 +127,6 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
       console.error("Download failed:", err);
     } finally {
       setDownloading(false);
-    }
-  };
-
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: `Quotation - ${quotation?.quotationNumber}`,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
     }
   };
 

@@ -40,9 +40,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
-  const [quotations, setQuotations] = useState<Quotation[]>([]);
-  const [loadingQuotations, setLoadingQuotations] = useState(false);
-  const [showQuotationSelect, setShowQuotationSelect] = useState(false);
+  // Removed unused state variables
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
 
   const {
@@ -52,7 +50,6 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
     watch,
     setValue,
     formState: { errors },
-    reset,
   } = useForm<FormData>({
     defaultValues: {
       receiptType: "box",
@@ -72,6 +69,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
           description: "Standard service",
           amount: 0,
           quantity: 1,
+          total: 0,
         },
       ],
       payment: {
@@ -93,61 +91,45 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
 
   // Load quotation data if coming from quotation
   useEffect(() => {
+    const loadQuotationData = async (quotationId: string) => {
+      try {
+        setIsLoading(true);
+        const response = await quotationsAPI.getQuotationById(quotationId);
+        const quotation = response.data.quotation;
+
+        // Pre-fill form with quotation data
+        setValue("quotationId", quotationId);
+        setValue("receiptType", "commitment"); // Default when creating from quotation
+        setValue("client.name", quotation.client.name);
+        setValue("client.phone", quotation.client.phone);
+        setValue("client.email", quotation.client.email || "");
+        setValue("client.address", quotation.client.company || "");
+        setValue("locations.from", quotation.locations.from);
+        setValue("locations.to", quotation.locations.to);
+        setValue("locations.movingDate", quotation.locations.movingDate.split("T")[0]);
+        setValue("payment.currency", quotation.pricing.currency);
+
+        // Convert quotation services to receipt services
+        const receiptServices = quotation.services.map((service) => ({
+          description: `${service.name} - ${service.description}`.trim().replace(/^- /, ""),
+          quantity: service.quantity,
+          amount: service.unitPrice,
+          total: service.quantity * service.unitPrice,
+        }));
+
+        setValue("services", receiptServices);
+        setSelectedQuotation(quotation);
+      } catch {
+        setError("Failed to load quotation data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     if (fromQuotationId) {
       loadQuotationData(fromQuotationId);
     }
-  }, [fromQuotationId]);
-
-  const loadQuotationData = async (quotationId: string) => {
-    try {
-      setIsLoading(true);
-      const quotation = await quotationsAPI.getQuotationById(quotationId);
-
-      // Pre-fill form with quotation data
-      setValue("quotationId", quotationId);
-      setValue("receiptType", "commitment"); // Default when creating from quotation
-      setValue("client.name", quotation.client.name);
-      setValue("client.phone", quotation.client.phone);
-      setValue("client.email", quotation.client.email || "");
-      setValue("client.address", quotation.client.company || "");
-      setValue("locations.from", quotation.locations.from);
-      setValue("locations.to", quotation.locations.to);
-      setValue("locations.movingDate", quotation.locations.movingDate.split("T")[0]);
-      setValue("payment.currency", quotation.pricing.currency);
-
-      // Convert quotation services to receipt services
-      const receiptServices = quotation.services.map((service) => ({
-        description: `${service.name} - ${service.description}`.trim().replace(/^- /, ""),
-        quantity: service.quantity,
-        amount: service.unitPrice * service.quantity,
-      }));
-
-      setValue("services", receiptServices);
-      setSelectedQuotation(quotation);
-    } catch (err) {
-      setError("Failed to load quotation data");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadAvailableQuotations = async () => {
-    try {
-      setLoadingQuotations(true);
-      const response = await quotationsAPI.getQuotations({
-        page: 1,
-        limit: 50,
-        status: "active",
-        sortBy: "createdAt",
-        sortOrder: "desc",
-      });
-      setQuotations(response.data.items);
-    } catch (err) {
-      console.error("Failed to load quotations:", err);
-    } finally {
-      setLoadingQuotations(false);
-    }
-  };
+  }, [fromQuotationId, setIsLoading, setValue]);
 
   // Calculate totals
   const totalAmount = watchedServices?.reduce((sum, service) => sum + (service.quantity * service.amount || 0), 0) || 0;
@@ -163,7 +145,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
       setIsLoading(true);
       setError(null);
 
-      let receiptData: any = {
+      const baseReceiptData: CreateReceiptData = {
         receiptType: data.receiptType,
         quotationId: data.quotationId || undefined,
         client: {
@@ -173,7 +155,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
           address: data.client.address || undefined,
         },
         locations:
-          data.locations.from || data.locations.to || data.locations.movingDate
+          data.locations && (data.locations.from || data.locations.to || data.locations.movingDate)
             ? {
                 from: data.locations.from || undefined,
                 to: data.locations.to || undefined,
@@ -185,15 +167,20 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
           method: data.payment.method || undefined,
           dueDate: data.payment.dueDate || undefined,
         },
+        services: [], // Will be filled below based on receipt type
         notes: data.notes || undefined,
       };
 
       // Handle commitment receipts specially
+      let receiptData: CreateReceiptData & { commitmentFeePaid?: number; totalMovingAmount?: number };
       if (data.receiptType === "commitment") {
         // Add commitment-specific fields
-        receiptData.commitmentFeePaid = Number(data.commitmentFeePaid) || 0;
-        receiptData.totalMovingAmount = Number(data.totalMovingAmount) || 0;
-        // Backend will generate the 3 service items automatically
+        receiptData = {
+          ...baseReceiptData,
+          services: [], // Backend will generate the 3 service items automatically
+          commitmentFeePaid: Number(data.commitmentFeePaid) || 0,
+          totalMovingAmount: Number(data.totalMovingAmount) || 0,
+        };
       } else {
         // Include total field for services - backend validation requires it
         const services = data.services.map((service) => ({
@@ -202,29 +189,40 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
           amount: Number(service.amount),
           total: Number(service.quantity) * Number(service.amount),
         }));
-        receiptData.services = services;
+        receiptData = {
+          ...baseReceiptData,
+          services,
+        };
       }
 
-      const response = await receiptsAPI.createReceipt(receiptData);
+      const response = await receiptsAPI.createReceipt(receiptData as CreateReceiptData);
       // Navigate to receipts list after successful creation
       navigate("/receipts", {
         state: { message: `Receipt ${response.data.receipt.receiptNumber} created successfully` },
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Receipt creation error:", err);
-      console.error("Error response:", err.response?.data);
 
       // Better error messages
       let errorMessage = "Failed to create receipt";
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.response?.data?.error?.details) {
-        const details = err.response.data.error.details;
-        errorMessage = Array.isArray(details)
-          ? details.map((d: any) => d.msg || d.message).join(", ")
-          : details.reason || details.message || errorMessage;
-      } else if (err.message) {
+      if (err instanceof Error) {
         errorMessage = err.message;
+
+        // Type guard for axios-like error structure
+        const axiosError = err as { response?: { data?: { message?: string; error?: { details?: unknown } } } };
+
+        if (axiosError.response?.data?.message) {
+          errorMessage = axiosError.response.data.message;
+        } else if (axiosError.response?.data?.error?.details) {
+          const details = axiosError.response.data.error.details;
+          if (Array.isArray(details)) {
+            errorMessage = details.map((d: { msg?: string; message?: string }) => d.msg || d.message).join(", ");
+          } else if (typeof details === "object" && details !== null) {
+            const detailsObj = details as { reason?: string; message?: string };
+            errorMessage = detailsObj.reason || detailsObj.message || errorMessage;
+          }
+        }
+        console.error("Error response:", axiosError.response?.data);
       }
 
       setError(errorMessage);
@@ -238,6 +236,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
       description: "Service description",
       quantity: 1,
       amount: 0,
+      total: 0,
     });
   };
 

@@ -65,7 +65,7 @@ export interface ReceiptVersion {
     fullName: string;
   };
   editedAt: string;
-  changes: any;
+  changes: Record<string, unknown>;
   reason?: string;
 }
 
@@ -251,7 +251,7 @@ export const receiptsAPI = {
         response?: {
           data?: {
             message?: string;
-            error?: any;
+            error?: Record<string, unknown>;
           };
         };
         message?: string;
@@ -300,7 +300,7 @@ export const receiptsAPI = {
   },
 
   // Get receipt statistics
-  getReceiptStats: async (period?: "week" | "month" | "year"): Promise<ApiResponse<{ stats: any }>> => {
+  getReceiptStats: async (period?: "week" | "month" | "year"): Promise<ApiResponse<{ stats: Record<string, unknown> }>> => {
     try {
       const params = period ? `?period=${period}` : "";
       const response = await api.get(`/receipts/stats${params}`);
@@ -362,7 +362,11 @@ export const receiptsAPI = {
     }
   },
 
-  bulkDownload: async (ids: string[]): Promise<ApiResponse<{ receipts: Array<{id: string, receiptNumber: string, downloadUrl: string}>, count: number }>> => {
+  bulkDownload: async (
+    ids: string[]
+  ): Promise<
+    ApiResponse<{ receipts: Array<{ id: string; receiptNumber: string; downloadUrl: string }>; count: number }>
+  > => {
     try {
       const response = await api.post("/receipts/bulk/download", { receiptIds: ids });
       return response.data;

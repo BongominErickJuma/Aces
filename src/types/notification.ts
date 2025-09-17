@@ -1,21 +1,21 @@
 export type NotificationType =
-  | 'document_created'
-  | 'document_updated'
-  | 'document_deleted'
-  | 'quotation_expired'
-  | 'quotation_converted'
-  | 'payment_received'
-  | 'payment_overdue'
-  | 'user_created'
-  | 'user_updated'
-  | 'user_role_changed'
-  | 'user_deleted'
-  | 'profile_incomplete'
-  | 'system_maintenance'
-  | 'backup_completed'
-  | 'security_alert';
+  | "document_created"
+  | "document_updated"
+  | "document_deleted"
+  | "quotation_expired"
+  | "quotation_converted"
+  | "payment_received"
+  | "payment_overdue"
+  | "user_created"
+  | "user_updated"
+  | "user_role_changed"
+  | "user_deleted"
+  | "profile_incomplete"
+  | "system_maintenance"
+  | "backup_completed"
+  | "security_alert";
 
-export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type NotificationPriority = "low" | "normal" | "high" | "urgent";
 
 export interface NotificationActor {
   _id: string;
@@ -35,7 +35,7 @@ export interface Notification {
   actionText?: string;
   actorId?: string;
   actor?: NotificationActor;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   readAt?: string;
   expiresAt?: string;
   isExpired?: boolean;
@@ -95,7 +95,7 @@ export interface CreateNotificationRequest {
   priority?: NotificationPriority;
   actionUrl?: string;
   actionText?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface NotificationFilters {

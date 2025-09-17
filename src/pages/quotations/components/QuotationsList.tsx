@@ -6,8 +6,6 @@ import {
   Filter,
   FileText,
   Calendar,
-  DollarSign,
-  User,
   Clock,
   Download,
   Edit,
@@ -16,8 +14,6 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  Grid,
-  List,
   Settings,
   RotateCcw,
   Trash2,
@@ -56,7 +52,7 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [searchDebounceTimer, setSearchDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const [searchDebounceTimer, setSearchDebounceTimer] = useState<number | null>(null);
   const [bulkDownloading, setBulkDownloading] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
@@ -85,6 +81,25 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
   const [deletingQuotation, setDeletingQuotation] = useState<Quotation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  useEffect(() => {
+    const loadQuotations = async () => {
+      try {
+        setLoading(true);
+        const response = await quotationsAPI.getQuotations(filters);
+        setQuotations(response.data.items);
+        setPagination(response.data.pagination);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load quotations");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQuotations();
+  }, [filters]);
+
+  // Separate loadQuotations for other functions that need to reload
   const loadQuotations = async () => {
     try {
       setLoading(true);
@@ -98,10 +113,6 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    loadQuotations();
-  }, [filters]);
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
@@ -709,446 +720,446 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
           <div className="hidden 2xl:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="w-12 px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedQuotations.size === quotations.length && quotations.length > 0}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
-                    />
-                  </th>
-                  {visibleColumns.has("quotationNumber") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Quotation #
-                    </th>
-                  )}
-                  {visibleColumns.has("type") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                  )}
-                  {visibleColumns.has("client") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Client
-                    </th>
-                  )}
-                  {visibleColumns.has("status") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                  )}
-                  {visibleColumns.has("amount") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                  )}
-                  {visibleColumns.has("validity") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Valid Until
-                    </th>
-                  )}
-                  {visibleColumns.has("date") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                  )}
-                  {visibleColumns.has("createdBy") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created By
-                    </th>
-                  )}
-                  {visibleColumns.has("remaining") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Days Left
-                    </th>
-                  )}
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {quotations.map((quotation, index) => (
-                  <motion.tr
-                    key={quotation._id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.02 }}
-                    className={`hover:bg-gray-50 transition-colors ${
-                      selectedQuotations.has(quotation._id) ? "bg-aces-green/5" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="w-12 px-4 py-3">
                       <input
                         type="checkbox"
-                        checked={selectedQuotations.has(quotation._id)}
-                        onChange={(e) => handleSelectQuotation(quotation._id, e.target.checked)}
+                        checked={selectedQuotations.size === quotations.length && quotations.length > 0}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
                         className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
                       />
-                    </td>
+                    </th>
                     {visibleColumns.has("quotationNumber") && (
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{quotation.quotationNumber}</td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Quotation #
+                      </th>
                     )}
                     {visibleColumns.has("type") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        <div className="flex items-center space-x-2">
-                          {getQuotationTypeIcon(quotation.type)}
-                          <span>{quotation.type}</span>
-                        </div>
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
                     )}
                     {visibleColumns.has("client") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        <div>
-                          <div className="font-medium">{quotation.client.name}</div>
-                          {quotation.client.company && (
-                            <div className="text-xs text-gray-500">{quotation.client.company}</div>
-                          )}
-                        </div>
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Client
+                      </th>
                     )}
                     {visibleColumns.has("status") && (
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                            quotation.validity.status === "active"
-                              ? "text-green-600 bg-green-100"
-                              : quotation.validity.status === "expired"
-                              ? "text-red-600 bg-red-100"
-                              : "text-blue-600 bg-blue-100"
-                          }`}
-                        >
-                          {quotation.validity.status === "active" ? (
-                            <CheckCircle size={12} />
-                          ) : quotation.validity.status === "expired" ? (
-                            <XCircle size={12} />
-                          ) : (
-                            <AlertCircle size={12} />
-                          )}
-                          <span className="capitalize">{quotation.validity.status}</span>
-                        </span>
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
                     )}
                     {visibleColumns.has("amount") && (
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {formatCurrency(quotation.pricing.totalAmount, quotation.pricing.currency)}
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Amount
+                      </th>
                     )}
                     {visibleColumns.has("validity") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">{formatDate(quotation.validity.validUntil)}</td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Valid Until
+                      </th>
                     )}
                     {visibleColumns.has("date") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">{formatDate(quotation.createdAt)}</td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created
+                      </th>
                     )}
                     {visibleColumns.has("createdBy") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        <div className="font-medium text-gray-900">{quotation.createdBy.fullName}</div>
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created By
+                      </th>
                     )}
                     {visibleColumns.has("remaining") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        <span
-                          className={
-                            calculateRemainingDays(quotation) < 0
-                              ? "text-red-600 font-medium"
-                              : calculateRemainingDays(quotation) < 7
-                              ? "text-yellow-600 font-medium"
-                              : ""
-                          }
-                        >
-                          {formatRemainingDays(quotation)}
-                        </span>
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Days Left
+                      </th>
                     )}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleViewQuotation(quotation)}
-                          className="p-1 text-gray-600 hover:text-aces-green hover:bg-gray-100 rounded transition-colors"
-                          title="View Details"
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/quotations/edit/${quotation._id}`);
-                          }}
-                          className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          title="Edit"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          onClick={(e) => handleDownloadPDF(quotation, e)}
-                          disabled={downloadingIds.has(quotation._id)}
-                          className={`p-1 rounded transition-colors ${
-                            downloadingIds.has(quotation._id)
-                              ? "text-gray-400 cursor-not-allowed"
-                              : "text-gray-600 hover:text-green-600 hover:bg-green-50"
-                          }`}
-                          title={downloadingIds.has(quotation._id) ? "Downloading..." : "Download PDF"}
-                        >
-                          {downloadingIds.has(quotation._id) ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Download size={14} />
-                          )}
-                        </button>
-                        {quotation.validity.status === "active" && (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExtendingQuotation(quotation);
-                                setShowExtendModal(true);
-                              }}
-                              className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                              title="Extend Validity"
-                            >
-                              <RotateCcw size={14} />
-                            </button>
-                            {isAdmin && (
+                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {quotations.map((quotation, index) => (
+                    <motion.tr
+                      key={quotation._id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: index * 0.02 }}
+                      className={`hover:bg-gray-50 transition-colors ${
+                        selectedQuotations.has(quotation._id) ? "bg-aces-green/5" : ""
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedQuotations.has(quotation._id)}
+                          onChange={(e) => handleSelectQuotation(quotation._id, e.target.checked)}
+                          className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
+                        />
+                      </td>
+                      {visibleColumns.has("quotationNumber") && (
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{quotation.quotationNumber}</td>
+                      )}
+                      {visibleColumns.has("type") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <div className="flex items-center space-x-2">
+                            {getQuotationTypeIcon(quotation.type)}
+                            <span>{quotation.type}</span>
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.has("client") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <div>
+                            <div className="font-medium">{quotation.client.name}</div>
+                            {quotation.client.company && (
+                              <div className="text-xs text-gray-500">{quotation.client.company}</div>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.has("status") && (
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                              quotation.validity.status === "active"
+                                ? "text-green-600 bg-green-100"
+                                : quotation.validity.status === "expired"
+                                ? "text-red-600 bg-red-100"
+                                : "text-blue-600 bg-blue-100"
+                            }`}
+                          >
+                            {quotation.validity.status === "active" ? (
+                              <CheckCircle size={12} />
+                            ) : quotation.validity.status === "expired" ? (
+                              <XCircle size={12} />
+                            ) : (
+                              <AlertCircle size={12} />
+                            )}
+                            <span className="capitalize">{quotation.validity.status}</span>
+                          </span>
+                        </td>
+                      )}
+                      {visibleColumns.has("amount") && (
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {formatCurrency(quotation.pricing.totalAmount, quotation.pricing.currency)}
+                        </td>
+                      )}
+                      {visibleColumns.has("validity") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">{formatDate(quotation.validity.validUntil)}</td>
+                      )}
+                      {visibleColumns.has("date") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">{formatDate(quotation.createdAt)}</td>
+                      )}
+                      {visibleColumns.has("createdBy") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <div className="font-medium text-gray-900">{quotation.createdBy.fullName}</div>
+                        </td>
+                      )}
+                      {visibleColumns.has("remaining") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <span
+                            className={
+                              calculateRemainingDays(quotation) < 0
+                                ? "text-red-600 font-medium"
+                                : calculateRemainingDays(quotation) < 7
+                                ? "text-yellow-600 font-medium"
+                                : ""
+                            }
+                          >
+                            {formatRemainingDays(quotation)}
+                          </span>
+                        </td>
+                      )}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleViewQuotation(quotation)}
+                            className="p-1 text-gray-600 hover:text-aces-green hover:bg-gray-100 rounded transition-colors"
+                            title="View Details"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/quotations/edit/${quotation._id}`);
+                            }}
+                            className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Edit"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => handleDownloadPDF(quotation, e)}
+                            disabled={downloadingIds.has(quotation._id)}
+                            className={`p-1 rounded transition-colors ${
+                              downloadingIds.has(quotation._id)
+                                ? "text-gray-400 cursor-not-allowed"
+                                : "text-gray-600 hover:text-green-600 hover:bg-green-50"
+                            }`}
+                            title={downloadingIds.has(quotation._id) ? "Downloading..." : "Download PDF"}
+                          >
+                            {downloadingIds.has(quotation._id) ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Download size={14} />
+                            )}
+                          </button>
+                          {quotation.validity.status === "active" && (
+                            <>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setDeletingQuotation(quotation);
-                                  setShowDeleteModal(true);
+                                  setExtendingQuotation(quotation);
+                                  setShowExtendModal(true);
                                 }}
-                                className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                                title="Delete Quotation"
+                                className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Extend Validity"
                               >
-                                <Trash2 size={14} />
+                                <RotateCcw size={14} />
                               </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
+                              {isAdmin && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeletingQuotation(quotation);
+                                    setShowDeleteModal(true);
+                                  }}
+                                  className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                  title="Delete Quotation"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
-        {/* Mobile/Tablet Card View (≤1200px) */}
-        <div className="block 2xl:hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {quotations.map((quotation, index) => (
-            <motion.div
-              key={quotation._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className={`bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-all cursor-pointer overflow-hidden group ${
-                selectedQuotations.has(quotation._id) ? "ring-2 ring-aces-green border-aces-green" : ""
-              }`}
-              onClick={() => handleViewQuotation(quotation)}
-            >
-              {/* Card Header */}
-              <div className="p-5 pb-0">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedQuotations.has(quotation._id)}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleSelectQuotation(quotation._id, e.target.checked);
-                      }}
-                      className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <div className="flex items-center space-x-2">
-                      {getQuotationTypeIcon(quotation.type)}
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                        {quotation.type}
+          {/* Mobile/Tablet Card View (≤1200px) */}
+          <div className="block 2xl:hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {quotations.map((quotation, index) => (
+                <motion.div
+                  key={quotation._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className={`bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-all cursor-pointer overflow-hidden group ${
+                    selectedQuotations.has(quotation._id) ? "ring-2 ring-aces-green border-aces-green" : ""
+                  }`}
+                  onClick={() => handleViewQuotation(quotation)}
+                >
+                  {/* Card Header */}
+                  <div className="p-5 pb-0">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedQuotations.has(quotation._id)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleSelectQuotation(quotation._id, e.target.checked);
+                          }}
+                          className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div className="flex items-center space-x-2">
+                          {getQuotationTypeIcon(quotation.type)}
+                          <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                            {quotation.type}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
+                          quotation.validity.status
+                        )}`}
+                      >
+                        {getStatusIcon(quotation.validity.status)}
+                        <span className="capitalize">{quotation.validity.status}</span>
                       </span>
                     </div>
-                  </div>
-                  <span
-                    className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                      quotation.validity.status
-                    )}`}
-                  >
-                    {getStatusIcon(quotation.validity.status)}
-                    <span className="capitalize">{quotation.validity.status}</span>
-                  </span>
-                </div>
 
-                {/* Quotation Number */}
-                <div className="mb-3">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">{quotation.quotationNumber}</h3>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <Calendar size={14} />
-                    <span>Created {formatDate(quotation.createdAt)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Body */}
-              <div className="px-5 pb-4">
-                {/* Client Information */}
-                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900 truncate">{quotation.client.name}</h4>
-                      {quotation.client.company && (
-                        <p className="text-sm text-gray-600 truncate">{quotation.client.company}</p>
-                      )}
-                      <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500">
-                        <Calendar size={12} />
-                        <span>Move: {formatDate(quotation.locations.movingDate)}</span>
+                    {/* Quotation Number */}
+                    <div className="mb-3">
+                      <h3 className="text-xl font-bold text-gray-900 mb-1">{quotation.quotationNumber}</h3>
+                      <div className="flex items-center space-x-2 text-sm text-gray-500">
+                        <Calendar size={14} />
+                        <span>Created {formatDate(quotation.createdAt)}</span>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Financial & Timeline Info */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-green-50 rounded-lg p-3 text-center">
-                    <div className="text-lg font-bold text-green-700">
-                      {formatCurrency(quotation.pricing.totalAmount, quotation.pricing.currency)}
+                  {/* Card Body */}
+                  <div className="px-5 pb-4">
+                    {/* Client Information */}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 truncate">{quotation.client.name}</h4>
+                          {quotation.client.company && (
+                            <p className="text-sm text-gray-600 truncate">{quotation.client.company}</p>
+                          )}
+                          <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500">
+                            <Calendar size={12} />
+                            <span>Move: {formatDate(quotation.locations.movingDate)}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-green-600">Total Amount</div>
-                  </div>
 
-                  <div
-                    className={`rounded-lg p-3 text-center ${
-                      calculateRemainingDays(quotation) < 0
-                        ? "bg-red-50"
-                        : calculateRemainingDays(quotation) < 7
-                        ? "bg-yellow-50"
-                        : "bg-blue-50"
-                    }`}
-                  >
-                    <div
-                      className={`text-sm font-bold ${
-                        calculateRemainingDays(quotation) < 0
-                          ? "text-red-700"
-                          : calculateRemainingDays(quotation) < 7
-                          ? "text-yellow-700"
-                          : "text-blue-700"
-                      }`}
-                    >
-                      {formatRemainingDays(quotation)}
-                    </div>
-                    <div
-                      className={`text-xs ${
-                        calculateRemainingDays(quotation) < 0
-                          ? "text-red-600"
-                          : calculateRemainingDays(quotation) < 7
-                          ? "text-yellow-600"
-                          : "text-blue-600"
-                      }`}
-                    >
-                      Validity
-                    </div>
-                  </div>
-                </div>
+                    {/* Financial & Timeline Info */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="bg-green-50 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-green-700">
+                          {formatCurrency(quotation.pricing.totalAmount, quotation.pricing.currency)}
+                        </div>
+                        <div className="text-xs text-green-600">Total Amount</div>
+                      </div>
 
-                {/* Creator Info */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <span>By {quotation.createdBy.fullName}</span>
-                  </div>
-                  <div className="text-gray-500">{formatDate(quotation.validity.validUntil)}</div>
-                </div>
-              </div>
-
-              {/* Card Footer - Actions */}
-              <div className="border-t border-gray-100 px-5 py-3 bg-gray-50 group-hover:bg-gray-100 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewQuotation(quotation);
-                      }}
-                      className="p-2 text-gray-600 hover:text-aces-green hover:bg-white rounded-lg transition-colors shadow-sm"
-                      title="View Details"
-                    >
-                      <Eye size={16} />
-                    </motion.button>
-
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/quotations/edit/${quotation._id}`);
-                      }}
-                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-white rounded-lg transition-colors shadow-sm"
-                      title="Edit"
-                    >
-                      <Edit size={16} />
-                    </motion.button>
-
-                    <motion.button
-                      whileHover={{ scale: downloadingIds.has(quotation._id) ? 1 : 1.1 }}
-                      whileTap={{ scale: downloadingIds.has(quotation._id) ? 1 : 0.9 }}
-                      onClick={(e) => handleDownloadPDF(quotation, e)}
-                      disabled={downloadingIds.has(quotation._id)}
-                      className={`p-2 rounded-lg transition-colors shadow-sm ${
-                        downloadingIds.has(quotation._id)
-                          ? "text-gray-400 bg-gray-200 cursor-not-allowed"
-                          : "text-gray-600 hover:text-green-600 hover:bg-white"
-                      }`}
-                      title={downloadingIds.has(quotation._id) ? "Downloading..." : "Download PDF"}
-                    >
-                      {downloadingIds.has(quotation._id) ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <Download size={16} />
-                      )}
-                    </motion.button>
-                  </div>
-
-                  {/* Additional Actions - only for active quotations */}
-                  {quotation.validity.status === "active" && (
-                    <div className="flex items-center space-x-2">
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExtendingQuotation(quotation);
-                          setShowExtendModal(true);
-                        }}
-                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-white rounded-lg transition-colors shadow-sm"
-                        title="Extend Validity"
+                      <div
+                        className={`rounded-lg p-3 text-center ${
+                          calculateRemainingDays(quotation) < 0
+                            ? "bg-red-50"
+                            : calculateRemainingDays(quotation) < 7
+                            ? "bg-yellow-50"
+                            : "bg-blue-50"
+                        }`}
                       >
-                        <RotateCcw size={16} />
-                      </motion.button>
+                        <div
+                          className={`text-sm font-bold ${
+                            calculateRemainingDays(quotation) < 0
+                              ? "text-red-700"
+                              : calculateRemainingDays(quotation) < 7
+                              ? "text-yellow-700"
+                              : "text-blue-700"
+                          }`}
+                        >
+                          {formatRemainingDays(quotation)}
+                        </div>
+                        <div
+                          className={`text-xs ${
+                            calculateRemainingDays(quotation) < 0
+                              ? "text-red-600"
+                              : calculateRemainingDays(quotation) < 7
+                              ? "text-yellow-600"
+                              : "text-blue-600"
+                          }`}
+                        >
+                          Validity
+                        </div>
+                      </div>
+                    </div>
 
-                      {isAdmin && (
+                    {/* Creator Info */}
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2 text-gray-600">
+                        <span>By {quotation.createdBy.fullName}</span>
+                      </div>
+                      <div className="text-gray-500">{formatDate(quotation.validity.validUntil)}</div>
+                    </div>
+                  </div>
+
+                  {/* Card Footer - Actions */}
+                  <div className="border-t border-gray-100 px-5 py-3 bg-gray-50 group-hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
                         <motion.button
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setDeletingQuotation(quotation);
-                            setShowDeleteModal(true);
+                            handleViewQuotation(quotation);
                           }}
-                          className="p-2 text-red-600 hover:text-red-700 hover:bg-white rounded-lg transition-colors shadow-sm"
-                          title="Delete Quotation"
+                          className="p-2 text-gray-600 hover:text-aces-green hover:bg-white rounded-lg transition-colors shadow-sm"
+                          title="View Details"
                         >
-                          <Trash2 size={16} />
+                          <Eye size={16} />
                         </motion.button>
+
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/quotations/edit/${quotation._id}`);
+                          }}
+                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-white rounded-lg transition-colors shadow-sm"
+                          title="Edit"
+                        >
+                          <Edit size={16} />
+                        </motion.button>
+
+                        <motion.button
+                          whileHover={{ scale: downloadingIds.has(quotation._id) ? 1 : 1.1 }}
+                          whileTap={{ scale: downloadingIds.has(quotation._id) ? 1 : 0.9 }}
+                          onClick={(e) => handleDownloadPDF(quotation, e)}
+                          disabled={downloadingIds.has(quotation._id)}
+                          className={`p-2 rounded-lg transition-colors shadow-sm ${
+                            downloadingIds.has(quotation._id)
+                              ? "text-gray-400 bg-gray-200 cursor-not-allowed"
+                              : "text-gray-600 hover:text-green-600 hover:bg-white"
+                          }`}
+                          title={downloadingIds.has(quotation._id) ? "Downloading..." : "Download PDF"}
+                        >
+                          {downloadingIds.has(quotation._id) ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <Download size={16} />
+                          )}
+                        </motion.button>
+                      </div>
+
+                      {/* Additional Actions - only for active quotations */}
+                      {quotation.validity.status === "active" && (
+                        <div className="flex items-center space-x-2">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExtendingQuotation(quotation);
+                              setShowExtendModal(true);
+                            }}
+                            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-white rounded-lg transition-colors shadow-sm"
+                            title="Extend Validity"
+                          >
+                            <RotateCcw size={16} />
+                          </motion.button>
+
+                          {isAdmin && (
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingQuotation(quotation);
+                                setShowDeleteModal(true);
+                              }}
+                              className="p-2 text-red-600 hover:text-red-700 hover:bg-white rounded-lg transition-colors shadow-sm"
+                              title="Delete Quotation"
+                            >
+                              <Trash2 size={16} />
+                            </motion.button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
         </>
       )}
 

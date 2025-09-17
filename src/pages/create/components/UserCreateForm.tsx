@@ -11,7 +11,7 @@ interface UserCreateFormProps {
   setIsLoading: (loading: boolean) => void;
 }
 
-interface FormData extends CreateUserData {}
+type FormData = CreateUserData;
 
 const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, setIsLoading }) => {
   const [error, setError] = useState<string | null>(null);
@@ -299,7 +299,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
                   type="tel"
                   {...register("phonePrimary", {
                     pattern: {
-                      value: /^[\+]?[0-9\s\-\(\)]+$/,
+                      value: /^[+]?[0-9\s\-()]+$/,
                       message: "Invalid phone number format",
                     },
                   })}
@@ -315,7 +315,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
                   type="tel"
                   {...register("phoneSecondary", {
                     pattern: {
-                      value: /^[\+]?[0-9\s\-\(\)]+$/,
+                      value: /^[+]?[0-9\s\-()]+$/,
                       message: "Invalid phone number format",
                     },
                   })}

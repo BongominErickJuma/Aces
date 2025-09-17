@@ -25,23 +25,19 @@ export const usersAPI = {
     try {
       const response = await api.post("/users", userData);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to create user");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to create user");
     }
   },
 
-  getAllUsers: async (params?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    role?: string;
-    status?: string;
-  }) => {
+  getAllUsers: async (params?: { page?: number; limit?: number; search?: string; role?: string; status?: string }) => {
     try {
       const response = await api.get("/users", { params });
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to fetch users");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch users");
     }
   },
 
@@ -49,8 +45,9 @@ export const usersAPI = {
     try {
       const response = await api.get(`/users/${id}`);
       return response.data.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to fetch user");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch user");
     }
   },
 
@@ -58,8 +55,9 @@ export const usersAPI = {
     try {
       const response = await api.put(`/users/${id}`, updates);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to update user");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to update user");
     }
   },
 
@@ -67,8 +65,9 @@ export const usersAPI = {
     try {
       const response = await api.delete(`/users/${id}`);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to delete user");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to delete user");
     }
   },
 
@@ -76,8 +75,9 @@ export const usersAPI = {
     try {
       const response = await api.post(`/users/${id}/reset-password`);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to reset password");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to reset password");
     }
   },
 };

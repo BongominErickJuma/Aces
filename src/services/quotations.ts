@@ -85,7 +85,7 @@ export interface UpdateQuotationData {
   client?: QuotationClient;
   locations?: QuotationLocations;
   services?: Omit<QuotationService, "total">[];
-  pricing?: QuotationPricing;  // Full pricing object including subtotal, taxAmount, totalAmount
+  pricing?: QuotationPricing; // Full pricing object including subtotal, taxAmount, totalAmount
   termsAndConditions?: string;
   notes?: string;
 }
@@ -156,11 +156,13 @@ export const quotationsAPI = {
       const response = await api.post("/quotations", data);
       return response.data;
     } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string; error?: { details?: { field?: string; reason?: string } } } } };
+      const axiosError = error as {
+        response?: { data?: { message?: string; error?: { details?: { field?: string; reason?: string } } } };
+      };
       throw new Error(
-        axiosError.response?.data?.error?.details?.reason || 
-        axiosError.response?.data?.message || 
-        "Failed to create quotation"
+        axiosError.response?.data?.error?.details?.reason ||
+          axiosError.response?.data?.message ||
+          "Failed to create quotation"
       );
     }
   },
@@ -188,7 +190,10 @@ export const quotationsAPI = {
   },
 
   // Extend quotation validity
-  extendValidity: async (id: string, data: ExtendValidityData): Promise<ApiResponse<{ quotationNumber: string; newValidUntil: string; remainingDays: number }>> => {
+  extendValidity: async (
+    id: string,
+    data: ExtendValidityData
+  ): Promise<ApiResponse<{ quotationNumber: string; newValidUntil: string; remainingDays: number }>> => {
     try {
       const response = await api.put(`/quotations/${id}/extend`, data);
       return response.data;
@@ -199,7 +204,9 @@ export const quotationsAPI = {
   },
 
   // Get quotation statistics
-  getQuotationStats: async (period?: "week" | "month" | "year"): Promise<ApiResponse<{ stats: any }>> => {
+  getQuotationStats: async (
+    period?: "week" | "month" | "year"
+  ): Promise<ApiResponse<{ stats: Record<string, unknown> }>> => {
     try {
       const params = period ? `?period=${period}` : "";
       const response = await api.get(`/quotations/stats${params}`);
@@ -211,7 +218,9 @@ export const quotationsAPI = {
   },
 
   // Generate quotation PDF
-  generatePDF: async (id: string): Promise<ApiResponse<{ pdfUrl: string; fileName: string; quotationNumber: string }>> => {
+  generatePDF: async (
+    id: string
+  ): Promise<ApiResponse<{ pdfUrl: string; fileName: string; quotationNumber: string }>> => {
     try {
       const response = await api.get(`/quotations/${id}/pdf`);
       return response.data;
@@ -235,7 +244,10 @@ export const quotationsAPI = {
   },
 
   // Send quotation PDF via email
-  sendPDF: async (id: string, data: SendQuotationData): Promise<ApiResponse<{ quotationNumber: string; sentTo: string }>> => {
+  sendPDF: async (
+    id: string,
+    data: SendQuotationData
+  ): Promise<ApiResponse<{ quotationNumber: string; sentTo: string }>> => {
     try {
       const response = await api.post(`/quotations/${id}/send`, data);
       return response.data;
@@ -248,7 +260,7 @@ export const quotationsAPI = {
   // Bulk operations
   bulkDelete: async (ids: string[]): Promise<ApiResponse<{ deletedCount: number; requestedCount: number }>> => {
     try {
-      const response = await api.post('/quotations/bulk/delete', { quotationIds: ids });
+      const response = await api.post("/quotations/bulk/delete", { quotationIds: ids });
       return response.data;
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } } };
@@ -256,9 +268,13 @@ export const quotationsAPI = {
     }
   },
 
-  bulkDownload: async (ids: string[]): Promise<ApiResponse<{ quotations: Array<{ id: string; quotationNumber: string; downloadUrl: string }>; count: number }>> => {
+  bulkDownload: async (
+    ids: string[]
+  ): Promise<
+    ApiResponse<{ quotations: Array<{ id: string; quotationNumber: string; downloadUrl: string }>; count: number }>
+  > => {
     try {
-      const response = await api.post('/quotations/bulk/download', { quotationIds: ids });
+      const response = await api.post("/quotations/bulk/download", { quotationIds: ids });
       return response.data;
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } } };

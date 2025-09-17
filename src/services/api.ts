@@ -36,12 +36,8 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Don't try to refresh if:
-    // 1. It's already a retry
-    // 2. It's the refresh endpoint itself
-    // 3. It's the profile endpoint during initial auth check
-    const isRefreshRequest = originalRequest.url?.includes('/auth/refresh');
-    const isProfileRequest = originalRequest.url?.includes('/auth/profile');
+    const isRefreshRequest = originalRequest.url?.includes("/auth/refresh");
+    const isProfileRequest = originalRequest.url?.includes("/auth/profile");
     const shouldSkipRefresh = originalRequest._retry || isRefreshRequest || (isProfileRequest && !accessToken);
 
     if (error.response?.status === 401 && !shouldSkipRefresh) {
@@ -81,30 +77,30 @@ export const tokenManager = {
 // Authentication API
 // Signature API
 export const signatureApi = {
-  saveSignature: async (data: { type: 'canvas' | 'upload'; data: string }) => {
-    const response = await api.post('/signatures/save', data);
+  saveSignature: async (data: { type: "canvas" | "upload"; data: string }) => {
+    const response = await api.post("/signatures/save", data);
     return response.data;
   },
 
   uploadSignature: async (file: File) => {
     const formData = new FormData();
-    formData.append('signature', file);
+    formData.append("signature", file);
 
-    const response = await api.post('/signatures/upload', formData, {
+    const response = await api.post("/signatures/upload", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
     return response.data;
   },
 
   getSignature: async () => {
-    const response = await api.get('/signatures/me');
+    const response = await api.get("/signatures/me");
     return response.data;
   },
 
   deleteSignature: async () => {
-    const response = await api.delete('/signatures/me');
+    const response = await api.delete("/signatures/me");
     return response.data;
   },
 };
@@ -124,7 +120,10 @@ export const authAPI = {
       return result;
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string; error?: { message?: string } } } };
-      throw new Error(axiosError.response?.data?.message || axiosError.response?.data?.error?.message || "Login failed");
+
+      throw new Error(
+        axiosError.response?.data?.message || axiosError.response?.data?.error?.message || "Login failed"
+      );
     }
   },
 

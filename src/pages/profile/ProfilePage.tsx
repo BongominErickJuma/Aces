@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User as UserIcon, Lock, CheckCircle, AlertCircle, FileSignature } from "lucide-react";
 import { PageLayout } from "../../components/layout";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import { api } from "../../services/api";
 import type { User } from "../../types/auth";
 import { ProfileOverview, PersonalInformationTab, SecuritySettingsTab } from "./components";
@@ -27,11 +27,12 @@ const ProfilePage: React.FC = () => {
       if (response.data.success) {
         setProfileData(response.data.data.user);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to fetch profile:", error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
       setMessage({
         type: "error",
-        text: error.response?.data?.message || "Failed to load profile data",
+        text: axiosError.response?.data?.message || "Failed to load profile data",
       });
     } finally {
       setLoading(false);
@@ -59,18 +60,23 @@ const ProfilePage: React.FC = () => {
         // Auto-hide success message after 3 seconds
         setTimeout(() => setMessage(null), 3000);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Profile update error:", error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
       setMessage({
         type: "error",
-        text: error.response?.data?.message || "Failed to update profile",
+        text: axiosError.response?.data?.message || "Failed to update profile",
       });
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePasswordChange = async (data: { currentPassword: string; newPassword: string; confirmPassword: string }) => {
+  const handlePasswordChange = async (data: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => {
     setSaving(true);
     try {
       const response = await api.put("/users/change-password", {
@@ -83,11 +89,12 @@ const ProfilePage: React.FC = () => {
         // Auto-hide success message after 5 seconds
         setTimeout(() => setMessage(null), 5000);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Password change error:", error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
       setMessage({
         type: "error",
-        text: error.response?.data?.message || "Failed to change password",
+        text: axiosError.response?.data?.message || "Failed to change password",
       });
     } finally {
       setSaving(false);
@@ -125,14 +132,15 @@ const ProfilePage: React.FC = () => {
         // Auto-hide success message after 3 seconds
         setTimeout(() => setMessage(null), 3000);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Avatar upload error:", error);
-      if (error.response?.status === 501) {
+      const axiosError = error as { response?: { status?: number; data?: { message?: string } } };
+      if (axiosError.response?.status === 501) {
         setMessage({ type: "error", text: "Avatar upload feature is not yet available" });
       } else {
         setMessage({
           type: "error",
-          text: error.response?.data?.message || "Failed to upload avatar",
+          text: axiosError.response?.data?.message || "Failed to upload avatar",
         });
       }
     } finally {

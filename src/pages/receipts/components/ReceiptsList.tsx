@@ -6,8 +6,6 @@ import {
   Filter,
   Receipt as ReceiptIcon,
   Calendar,
-  DollarSign,
-  User,
   Clock,
   Download,
   Edit,
@@ -19,8 +17,6 @@ import {
   Package,
   FileText,
   Loader2,
-  Grid,
-  List,
   Settings,
   Trash2,
 } from "lucide-react";
@@ -28,11 +24,7 @@ import { receiptsAPI, type Receipt, type ReceiptFilters } from "../../../service
 import { Button } from "../../../components/ui/Button";
 import { useAuth } from "../../../context/useAuth";
 
-interface ReceiptsListProps {
-  onViewReceipt: (receipt: Receipt) => void;
-}
-
-const ReceiptsList: React.FC<ReceiptsListProps> = () => {
+const ReceiptsList: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -54,7 +46,7 @@ const ReceiptsList: React.FC<ReceiptsListProps> = () => {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [searchDebounceTimer, setSearchDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const [searchDebounceTimer, setSearchDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
@@ -92,7 +84,7 @@ const ReceiptsList: React.FC<ReceiptsListProps> = () => {
 
   useEffect(() => {
     loadReceipts();
-  }, [filters]);
+  }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
@@ -122,7 +114,7 @@ const ReceiptsList: React.FC<ReceiptsListProps> = () => {
     [searchDebounceTimer]
   );
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: string | boolean | undefined) => {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   };
 
@@ -698,464 +690,458 @@ const ReceiptsList: React.FC<ReceiptsListProps> = () => {
           <div className="hidden 2xl:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="w-12 px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedReceipts.size === receipts.length && receipts.length > 0}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
-                    />
-                  </th>
-                  {visibleColumns.has("receiptNumber") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Receipt #
-                    </th>
-                  )}
-                  {visibleColumns.has("type") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                  )}
-                  {visibleColumns.has("client") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Client
-                    </th>
-                  )}
-                  {visibleColumns.has("status") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                  )}
-                  {visibleColumns.has("amount") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                  )}
-                  {visibleColumns.has("balance") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Balance
-                    </th>
-                  )}
-                  {visibleColumns.has("date") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                  )}
-                  {visibleColumns.has("dueDate") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Due Date
-                    </th>
-                  )}
-                  {visibleColumns.has("createdBy") && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created By
-                    </th>
-                  )}
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {receipts.map((receipt, index) => (
-                  <motion.tr
-                    key={receipt._id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.02 }}
-                    className={`hover:bg-gray-50 transition-colors ${
-                      selectedReceipts.has(receipt._id) ? "bg-aces-green/5" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="w-12 px-4 py-3">
                       <input
                         type="checkbox"
-                        checked={selectedReceipts.has(receipt._id)}
-                        onChange={(e) => handleSelectReceipt(receipt._id, e.target.checked)}
+                        checked={selectedReceipts.size === receipts.length && receipts.length > 0}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
                         className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
                       />
-                    </td>
+                    </th>
                     {visibleColumns.has("receiptNumber") && (
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{receipt.receiptNumber}</td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Receipt #
+                      </th>
                     )}
                     {visibleColumns.has("type") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        <div className="flex items-center space-x-2">
-                          {getReceiptTypeIcon(receipt.receiptType)}
-                          <span>{getReceiptTypeLabel(receipt.receiptType)}</span>
-                        </div>
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
                     )}
                     {visibleColumns.has("client") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">{receipt.client.name}</td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Client
+                      </th>
                     )}
                     {visibleColumns.has("status") && (
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(
-                            receipt.payment.status
-                          )}`}
-                        >
-                          {getPaymentStatusIcon(receipt.payment.status)}
-                          <span className="capitalize">{receipt.payment.status}</span>
-                        </span>
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
                     )}
                     {visibleColumns.has("amount") && (
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {formatCurrency(receipt.payment.totalAmount, receipt.payment.currency)}
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Amount
+                      </th>
                     )}
                     {visibleColumns.has("balance") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {receipt.payment.balance > 0 ? (
-                          <span className="text-red-600 font-medium">
-                            {formatCurrency(receipt.payment.balance, receipt.payment.currency)}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Balance
+                      </th>
                     )}
                     {visibleColumns.has("date") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">{formatDate(receipt.createdAt)}</td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
                     )}
                     {visibleColumns.has("dueDate") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {receipt.payment.dueDate ? (
-                          <span className={receipt.isOverdue ? "text-red-600 font-medium" : ""}>
-                            {formatDate(receipt.payment.dueDate)}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Due Date
+                      </th>
                     )}
                     {visibleColumns.has("createdBy") && (
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        <div className="font-medium text-gray-900">{receipt.createdBy?.fullName || "Unknown"}</div>
-                      </td>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created By
+                      </th>
                     )}
-                    <td className="px-4 py-3">
+                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {receipts.map((receipt, index) => (
+                    <motion.tr
+                      key={receipt._id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: index * 0.02 }}
+                      className={`hover:bg-gray-50 transition-colors ${
+                        selectedReceipts.has(receipt._id) ? "bg-aces-green/5" : ""
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedReceipts.has(receipt._id)}
+                          onChange={(e) => handleSelectReceipt(receipt._id, e.target.checked)}
+                          className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
+                        />
+                      </td>
+                      {visibleColumns.has("receiptNumber") && (
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{receipt.receiptNumber}</td>
+                      )}
+                      {visibleColumns.has("type") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <div className="flex items-center space-x-2">
+                            {getReceiptTypeIcon(receipt.receiptType)}
+                            <span>{getReceiptTypeLabel(receipt.receiptType)}</span>
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.has("client") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">{receipt.client.name}</td>
+                      )}
+                      {visibleColumns.has("status") && (
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(
+                              receipt.payment.status
+                            )}`}
+                          >
+                            {getPaymentStatusIcon(receipt.payment.status)}
+                            <span className="capitalize">{receipt.payment.status}</span>
+                          </span>
+                        </td>
+                      )}
+                      {visibleColumns.has("amount") && (
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {formatCurrency(receipt.payment.totalAmount, receipt.payment.currency)}
+                        </td>
+                      )}
+                      {visibleColumns.has("balance") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {receipt.payment.balance > 0 ? (
+                            <span className="text-red-600 font-medium">
+                              {formatCurrency(receipt.payment.balance, receipt.payment.currency)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      )}
+                      {visibleColumns.has("date") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">{formatDate(receipt.createdAt)}</td>
+                      )}
+                      {visibleColumns.has("dueDate") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {receipt.payment.dueDate ? (
+                            <span className={receipt.isOverdue ? "text-red-600 font-medium" : ""}>
+                              {formatDate(receipt.payment.dueDate)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      )}
+                      {visibleColumns.has("createdBy") && (
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <div className="font-medium text-gray-900">{receipt.createdBy?.fullName || "Unknown"}</div>
+                        </td>
+                      )}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleViewReceipt(receipt)}
+                            className="p-1 text-gray-600 hover:text-aces-green hover:bg-gray-100 rounded transition-colors"
+                            title="View Details"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => handleEditReceipt(receipt._id, e)}
+                            className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Edit"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => handleDeleteReceipt(receipt, e)}
+                              disabled={deletingId === receipt._id}
+                              className={`p-1 rounded transition-colors ${
+                                deletingId === receipt._id
+                                  ? "text-gray-400 cursor-not-allowed"
+                                  : "text-red-600 hover:text-red-800 hover:bg-red-50"
+                              }`}
+                              title={deletingId === receipt._id ? "Deleting..." : "Delete"}
+                            >
+                              {deletingId === receipt._id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Trash2 size={14} />
+                              )}
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => handleDownloadPDF(receipt, e)}
+                            disabled={downloadingIds.has(receipt._id)}
+                            className={`p-1 rounded transition-colors ${
+                              downloadingIds.has(receipt._id)
+                                ? "text-gray-400 cursor-not-allowed"
+                                : "text-gray-600 hover:text-green-600 hover:bg-green-50"
+                            }`}
+                            title={downloadingIds.has(receipt._id) ? "Downloading..." : "Download PDF"}
+                          >
+                            {downloadingIds.has(receipt._id) ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Download size={14} />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile/Tablet Card View (≤1200px) */}
+          <div className="block 2xl:hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {receipts.map((receipt, index) => (
+                <motion.div
+                  key={receipt._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className={`bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-all cursor-pointer overflow-hidden group ${
+                    selectedReceipts.has(receipt._id) ? "ring-2 ring-aces-green border-aces-green" : ""
+                  }`}
+                  onClick={() => handleViewReceipt(receipt)}
+                >
+                  {/* Card Header */}
+                  <div className="p-5 pb-0">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedReceipts.has(receipt._id)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleSelectReceipt(receipt._id, e.target.checked);
+                          }}
+                          className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div className="flex items-center space-x-2">
+                          {getReceiptTypeIcon(receipt.receiptType)}
+                          <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                            {getReceiptTypeLabel(receipt.receiptType)}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusColor(
+                          receipt.payment.status
+                        )}`}
+                      >
+                        {getPaymentStatusIcon(receipt.payment.status)}
+                        <span className="capitalize">{receipt.payment.status}</span>
+                      </span>
+                    </div>
+
+                    {/* Receipt Number */}
+                    <div className="mb-3">
+                      <h3 className="text-xl font-bold text-gray-900 mb-1">{receipt.receiptNumber}</h3>
+                      <div className="flex items-center space-x-2 text-sm text-gray-500">
+                        <Calendar size={14} />
+                        <span>Issued {formatDate(receipt.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="px-5 pb-4">
+                    {/* Client Information */}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 truncate">{receipt.client.name}</h4>
+                          {receipt.payment.dueDate && (
+                            <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500">
+                              <Clock size={12} />
+                              <span className={receipt.isOverdue ? "text-red-600 font-medium" : ""}>
+                                {receipt.isOverdue
+                                  ? `Overdue by ${receipt.daysOverdue} days`
+                                  : `Due: ${formatDate(receipt.payment.dueDate)}`}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Financial Info */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div
+                        className={`rounded-lg p-3 text-center ${
+                          receipt.payment.status === "paid"
+                            ? "bg-green-50"
+                            : receipt.payment.status === "partial"
+                            ? "bg-yellow-50"
+                            : receipt.payment.status === "overdue"
+                            ? "bg-red-50"
+                            : "bg-gray-50"
+                        }`}
+                      >
+                        <div
+                          className={`text-lg font-bold ${
+                            receipt.payment.status === "paid"
+                              ? "text-green-700"
+                              : receipt.payment.status === "partial"
+                              ? "text-yellow-700"
+                              : receipt.payment.status === "overdue"
+                              ? "text-red-700"
+                              : "text-gray-700"
+                          }`}
+                        >
+                          {formatCurrency(receipt.payment.totalAmount, receipt.payment.currency)}
+                        </div>
+                        <div
+                          className={`text-xs ${
+                            receipt.payment.status === "paid"
+                              ? "text-green-600"
+                              : receipt.payment.status === "partial"
+                              ? "text-yellow-600"
+                              : receipt.payment.status === "overdue"
+                              ? "text-red-600"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          Total Amount
+                        </div>
+                      </div>
+
+                      <div
+                        className={`rounded-lg p-3 text-center ${
+                          receipt.payment.balance > 0 ? "bg-orange-50" : "bg-blue-50"
+                        }`}
+                      >
+                        <div
+                          className={`text-lg font-bold ${
+                            receipt.payment.balance > 0 ? "text-orange-700" : "text-blue-700"
+                          }`}
+                        >
+                          {receipt.payment.balance > 0
+                            ? formatCurrency(receipt.payment.balance, receipt.payment.currency)
+                            : formatCurrency(receipt.payment.amountPaid, receipt.payment.currency)}
+                        </div>
+                        <div className={`text-xs ${receipt.payment.balance > 0 ? "text-orange-600" : "text-blue-600"}`}>
+                          {receipt.payment.balance > 0 ? "Balance Due" : "Amount Paid"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Creator and Additional Info */}
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2 text-gray-600">
+                        <span>By {receipt.createdBy?.fullName || "Unknown"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Footer - Actions */}
+                  <div className="border-t border-gray-100 px-5 py-3 bg-gray-50 group-hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleViewReceipt(receipt)}
-                          className="p-1 text-gray-600 hover:text-aces-green hover:bg-gray-100 rounded transition-colors"
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewReceipt(receipt);
+                          }}
+                          className="p-2 text-gray-600 hover:text-aces-green hover:bg-white rounded-lg transition-colors shadow-sm"
                           title="View Details"
                         >
-                          <Eye size={14} />
-                        </button>
-                        <button
+                          <Eye size={16} />
+                        </motion.button>
+
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                           onClick={(e) => handleEditReceipt(receipt._id, e)}
-                          className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-white rounded-lg transition-colors shadow-sm"
                           title="Edit"
                         >
-                          <Edit size={14} />
-                        </button>
+                          <Edit size={16} />
+                        </motion.button>
+
                         {isAdmin && (
-                          <button
+                          <motion.button
+                            whileHover={{ scale: deletingId === receipt._id ? 1 : 1.1 }}
+                            whileTap={{ scale: deletingId === receipt._id ? 1 : 0.9 }}
                             onClick={(e) => handleDeleteReceipt(receipt, e)}
                             disabled={deletingId === receipt._id}
-                            className={`p-1 rounded transition-colors ${
+                            className={`p-2 rounded-lg transition-colors shadow-sm ${
                               deletingId === receipt._id
-                                ? "text-gray-400 cursor-not-allowed"
+                                ? "text-gray-400 bg-gray-200 cursor-not-allowed"
                                 : "text-red-600 hover:text-red-800 hover:bg-red-50"
                             }`}
                             title={deletingId === receipt._id ? "Deleting..." : "Delete"}
                           >
                             {deletingId === receipt._id ? (
-                              <Loader2 size={14} className="animate-spin" />
+                              <Loader2 size={16} className="animate-spin" />
                             ) : (
-                              <Trash2 size={14} />
+                              <Trash2 size={16} />
                             )}
-                          </button>
+                          </motion.button>
                         )}
-                        <button
+
+                        <motion.button
+                          whileHover={{ scale: downloadingIds.has(receipt._id) ? 1 : 1.1 }}
+                          whileTap={{ scale: downloadingIds.has(receipt._id) ? 1 : 0.9 }}
                           onClick={(e) => handleDownloadPDF(receipt, e)}
                           disabled={downloadingIds.has(receipt._id)}
-                          className={`p-1 rounded transition-colors ${
+                          className={`p-2 rounded-lg transition-colors shadow-sm ${
                             downloadingIds.has(receipt._id)
-                              ? "text-gray-400 cursor-not-allowed"
-                              : "text-gray-600 hover:text-green-600 hover:bg-green-50"
+                              ? "text-gray-400 bg-gray-200 cursor-not-allowed"
+                              : "text-gray-600 hover:text-green-600 hover:bg-white"
                           }`}
                           title={downloadingIds.has(receipt._id) ? "Downloading..." : "Download PDF"}
                         >
                           {downloadingIds.has(receipt._id) ? (
-                            <Loader2 size={14} className="animate-spin" />
+                            <Loader2 size={16} className="animate-spin" />
                           ) : (
-                            <Download size={14} />
+                            <Download size={16} />
                           )}
-                        </button>
+                        </motion.button>
                       </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        {/* Mobile/Tablet Card View (≤1200px) */}
-        <div className="block 2xl:hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {receipts.map((receipt, index) => (
-            <motion.div
-              key={receipt._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className={`bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-all cursor-pointer overflow-hidden group ${
-                selectedReceipts.has(receipt._id) ? "ring-2 ring-aces-green border-aces-green" : ""
-              }`}
-              onClick={() => handleViewReceipt(receipt)}
-            >
-              {/* Card Header */}
-              <div className="p-5 pb-0">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedReceipts.has(receipt._id)}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleSelectReceipt(receipt._id, e.target.checked);
-                      }}
-                      className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <div className="flex items-center space-x-2">
-                      {getReceiptTypeIcon(receipt.receiptType)}
-                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                        {getReceiptTypeLabel(receipt.receiptType)}
-                      </span>
-                    </div>
-                  </div>
-                  <span
-                    className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusColor(
-                      receipt.payment.status
-                    )}`}
-                  >
-                    {getPaymentStatusIcon(receipt.payment.status)}
-                    <span className="capitalize">{receipt.payment.status}</span>
-                  </span>
-                </div>
-
-                {/* Receipt Number */}
-                <div className="mb-3">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">{receipt.receiptNumber}</h3>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <Calendar size={14} />
-                    <span>Issued {formatDate(receipt.createdAt)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Body */}
-              <div className="px-5 pb-4">
-                {/* Client Information */}
-                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900 truncate">{receipt.client.name}</h4>
-                      {receipt.client.company && (
-                        <p className="text-sm text-gray-600 truncate">{receipt.client.company}</p>
-                      )}
-                      {receipt.payment.dueDate && (
-                        <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500">
-                          <Clock size={12} />
-                          <span className={receipt.isOverdue ? "text-red-600 font-medium" : ""}>
-                            {receipt.isOverdue
-                              ? `Overdue by ${receipt.daysOverdue} days`
-                              : `Due: ${formatDate(receipt.payment.dueDate)}`}
-                          </span>
+                      {/* Payment Status Actions */}
+                      {receipt.payment.status !== "paid" && receipt.payment.status !== "cancelled" && (
+                        <div className="flex items-center space-x-2">
+                          {receipt.payment.status === "pending" || receipt.payment.status === "partial" ? (
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Handle payment recording
+                              }}
+                              className="px-3 py-1.5 bg-aces-green text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                              title="Record Payment"
+                            >
+                              <CreditCard size={14} className="inline mr-1" />
+                              Record Payment
+                            </motion.button>
+                          ) : receipt.isOverdue ? (
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Handle send reminder
+                              }}
+                              className="px-3 py-1.5 bg-red-500 text-white text-xs font-medium rounded-lg hover:bg-red-600 transition-colors shadow-sm"
+                              title="Send Reminder"
+                            >
+                              <AlertTriangle size={14} className="inline mr-1" />
+                              Send Reminder
+                            </motion.button>
+                          ) : null}
                         </div>
                       )}
                     </div>
                   </div>
-                </div>
-
-                {/* Financial Info */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div
-                    className={`rounded-lg p-3 text-center ${
-                      receipt.payment.status === "paid"
-                        ? "bg-green-50"
-                        : receipt.payment.status === "partial"
-                        ? "bg-yellow-50"
-                        : receipt.payment.status === "overdue"
-                        ? "bg-red-50"
-                        : "bg-gray-50"
-                    }`}
-                  >
-                    <div
-                      className={`text-lg font-bold ${
-                        receipt.payment.status === "paid"
-                          ? "text-green-700"
-                          : receipt.payment.status === "partial"
-                          ? "text-yellow-700"
-                          : receipt.payment.status === "overdue"
-                          ? "text-red-700"
-                          : "text-gray-700"
-                      }`}
-                    >
-                      {formatCurrency(receipt.payment.totalAmount, receipt.payment.currency)}
-                    </div>
-                    <div
-                      className={`text-xs ${
-                        receipt.payment.status === "paid"
-                          ? "text-green-600"
-                          : receipt.payment.status === "partial"
-                          ? "text-yellow-600"
-                          : receipt.payment.status === "overdue"
-                          ? "text-red-600"
-                          : "text-gray-600"
-                      }`}
-                    >
-                      Total Amount
-                    </div>
-                  </div>
-
-                  <div
-                    className={`rounded-lg p-3 text-center ${
-                      receipt.payment.balance > 0 ? "bg-orange-50" : "bg-blue-50"
-                    }`}
-                  >
-                    <div
-                      className={`text-lg font-bold ${
-                        receipt.payment.balance > 0 ? "text-orange-700" : "text-blue-700"
-                      }`}
-                    >
-                      {receipt.payment.balance > 0
-                        ? formatCurrency(receipt.payment.balance, receipt.payment.currency)
-                        : formatCurrency(receipt.payment.amountPaid, receipt.payment.currency)}
-                    </div>
-                    <div className={`text-xs ${receipt.payment.balance > 0 ? "text-orange-600" : "text-blue-600"}`}>
-                      {receipt.payment.balance > 0 ? "Balance Due" : "Amount Paid"}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Creator and Additional Info */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <span>By {receipt.createdBy?.fullName || "Unknown"}</span>
-                  </div>
-                  {receipt.payment.paymentMethod && (
-                    <div className="text-xs text-gray-500">via {receipt.payment.paymentMethod}</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Card Footer - Actions */}
-              <div className="border-t border-gray-100 px-5 py-3 bg-gray-50 group-hover:bg-gray-100 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewReceipt(receipt);
-                      }}
-                      className="p-2 text-gray-600 hover:text-aces-green hover:bg-white rounded-lg transition-colors shadow-sm"
-                      title="View Details"
-                    >
-                      <Eye size={16} />
-                    </motion.button>
-
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => handleEditReceipt(receipt._id, e)}
-                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-white rounded-lg transition-colors shadow-sm"
-                      title="Edit"
-                    >
-                      <Edit size={16} />
-                    </motion.button>
-
-                    {isAdmin && (
-                      <motion.button
-                        whileHover={{ scale: deletingId === receipt._id ? 1 : 1.1 }}
-                        whileTap={{ scale: deletingId === receipt._id ? 1 : 0.9 }}
-                        onClick={(e) => handleDeleteReceipt(receipt, e)}
-                        disabled={deletingId === receipt._id}
-                        className={`p-2 rounded-lg transition-colors shadow-sm ${
-                          deletingId === receipt._id
-                            ? "text-gray-400 bg-gray-200 cursor-not-allowed"
-                            : "text-red-600 hover:text-red-800 hover:bg-red-50"
-                        }`}
-                        title={deletingId === receipt._id ? "Deleting..." : "Delete"}
-                      >
-                        {deletingId === receipt._id ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <Trash2 size={16} />
-                        )}
-                      </motion.button>
-                    )}
-
-                    <motion.button
-                      whileHover={{ scale: downloadingIds.has(receipt._id) ? 1 : 1.1 }}
-                      whileTap={{ scale: downloadingIds.has(receipt._id) ? 1 : 0.9 }}
-                      onClick={(e) => handleDownloadPDF(receipt, e)}
-                      disabled={downloadingIds.has(receipt._id)}
-                      className={`p-2 rounded-lg transition-colors shadow-sm ${
-                        downloadingIds.has(receipt._id)
-                          ? "text-gray-400 bg-gray-200 cursor-not-allowed"
-                          : "text-gray-600 hover:text-green-600 hover:bg-white"
-                      }`}
-                      title={downloadingIds.has(receipt._id) ? "Downloading..." : "Download PDF"}
-                    >
-                      {downloadingIds.has(receipt._id) ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <Download size={16} />
-                      )}
-                    </motion.button>
-                  </div>
-
-                  {/* Payment Status Actions */}
-                  {receipt.payment.status !== "paid" && receipt.payment.status !== "cancelled" && (
-                    <div className="flex items-center space-x-2">
-                      {receipt.payment.status === "pending" || receipt.payment.status === "partial" ? (
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Handle payment recording
-                          }}
-                          className="px-3 py-1.5 bg-aces-green text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm"
-                          title="Record Payment"
-                        >
-                          <CreditCard size={14} className="inline mr-1" />
-                          Record Payment
-                        </motion.button>
-                      ) : receipt.isOverdue ? (
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Handle send reminder
-                          }}
-                          className="px-3 py-1.5 bg-red-500 text-white text-xs font-medium rounded-lg hover:bg-red-600 transition-colors shadow-sm"
-                          title="Send Reminder"
-                        >
-                          <AlertTriangle size={14} className="inline mr-1" />
-                          Send Reminder
-                        </motion.button>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
         </>
       )}
 

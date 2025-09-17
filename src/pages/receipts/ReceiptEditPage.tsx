@@ -63,7 +63,7 @@ const ReceiptEditPage: React.FC = () => {
     if (id) {
       fetchReceipt();
     }
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchReceipt = async () => {
     if (!id) return;
@@ -79,19 +79,15 @@ const ReceiptEditPage: React.FC = () => {
       let commitmentFeePaid = 0;
       let totalMovingAmount = 0;
 
-      if (receiptData.receiptType === 'commitment' && receiptData.services) {
+      if (receiptData.receiptType === "commitment" && receiptData.services) {
         // Find the commitment fee service item
-        const commitmentFeeService = receiptData.services.find(s =>
-          s.description === 'Commitment Fee Paid'
-        );
+        const commitmentFeeService = receiptData.services.find((s) => s.description === "Commitment Fee Paid");
         if (commitmentFeeService) {
           commitmentFeePaid = commitmentFeeService.amount;
         }
 
         // Find the total amount service item
-        const totalAmountService = receiptData.services.find(s =>
-          s.description === 'Total Amount For Moving'
-        );
+        const totalAmountService = receiptData.services.find((s) => s.description === "Total Amount For Moving");
         if (totalAmountService) {
           totalMovingAmount = totalAmountService.amount;
         }
@@ -139,17 +135,17 @@ const ReceiptEditPage: React.FC = () => {
     }
   };
 
-  const handleInputChange = (section: keyof typeof formData, field: string, value: any) => {
+  const handleInputChange = (section: keyof typeof formData, field: string, value: string | number | undefined) => {
     setFormData((prev) => ({
       ...prev,
       [section]:
         typeof prev[section] === "object" && !Array.isArray(prev[section])
-          ? { ...(prev[section] as any), [field]: value }
+          ? { ...(prev[section] as Record<string, unknown>), [field]: value }
           : value,
     }));
   };
 
-  const handleServiceChange = (index: number, field: keyof ReceiptService, value: any) => {
+  const handleServiceChange = (index: number, field: keyof ReceiptService, value: string | number) => {
     const updatedServices = [...formData.services];
     updatedServices[index] = {
       ...updatedServices[index],
@@ -203,13 +199,13 @@ const ReceiptEditPage: React.FC = () => {
       return;
     }
 
-    if (formData.receiptType !== 'commitment' && formData.services.length === 0) {
+    if (formData.receiptType !== "commitment" && formData.services.length === 0) {
       setError("At least one service is required");
       return;
     }
 
     // Validate based on receipt type
-    if (formData.receiptType === 'commitment') {
+    if (formData.receiptType === "commitment") {
       // Validate commitment receipt fields
       if (!formData.commitmentFeePaid && formData.commitmentFeePaid !== 0) {
         setError("Commitment fee is required");
@@ -233,9 +229,9 @@ const ReceiptEditPage: React.FC = () => {
       setSaving(true);
       setError(null);
 
-      let updateData: any;
+      let updateData: Record<string, unknown>;
 
-      if (formData.receiptType === 'commitment') {
+      if (formData.receiptType === "commitment") {
         // For commitment receipts, send commitment-specific data
         updateData = {
           receiptType: formData.receiptType,
@@ -280,7 +276,7 @@ const ReceiptEditPage: React.FC = () => {
         };
       }
 
-      const response = await receiptsAPI.updateReceipt(id, updateData);
+      await receiptsAPI.updateReceipt(id, updateData);
       navigate(`/receipts/${id}`, {
         state: { message: "Receipt updated successfully" },
       });
@@ -453,16 +449,16 @@ const ReceiptEditPage: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center">
               <FileText className="w-5 h-5 mr-2 text-emerald-600" />
-              {formData.receiptType === 'commitment' ? 'Commitment Receipt Details' : 'Services'}
+              {formData.receiptType === "commitment" ? "Commitment Receipt Details" : "Services"}
             </h2>
-            {formData.receiptType !== 'commitment' && (
+            {formData.receiptType !== "commitment" && (
               <Button type="button" onClick={addService} variant="secondary" size="sm">
                 Add Service
               </Button>
             )}
           </div>
 
-          {formData.receiptType === 'commitment' ? (
+          {formData.receiptType === "commitment" ? (
             /* Commitment Receipt Fields */
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -473,7 +469,7 @@ const ReceiptEditPage: React.FC = () => {
                   <input
                     type="number"
                     value={formData.commitmentFeePaid}
-                    onChange={(e) => setFormData(prev => ({ ...prev, commitmentFeePaid: Number(e.target.value) }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, commitmentFeePaid: Number(e.target.value) }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     min="0"
                     step="1000"
@@ -487,7 +483,7 @@ const ReceiptEditPage: React.FC = () => {
                   <input
                     type="number"
                     value={formData.totalMovingAmount}
-                    onChange={(e) => setFormData(prev => ({ ...prev, totalMovingAmount: Number(e.target.value) }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, totalMovingAmount: Number(e.target.value) }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     min="0"
                     step="1000"

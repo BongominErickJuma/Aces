@@ -44,9 +44,10 @@ export const SignatureManager: React.FC = () => {
       if (response.data.signature) {
         setSignature(response.data.signature);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error loading signature:", error);
-      if (error.response?.status !== 404) {
+      const err = error as { response?: { status?: number } };
+      if (err.response?.status !== 404) {
         setMessage({
           type: "error",
           text: "Failed to load signature",
@@ -76,11 +77,12 @@ export const SignatureManager: React.FC = () => {
         type: "success",
         text: "Signature saved successfully",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error saving signature:", error);
+      const err = error as { response?: { data?: { message?: string } } };
       setMessage({
         type: "error",
-        text: error.response?.data?.message || "Failed to save signature",
+        text: err.response?.data?.message || "Failed to save signature",
       });
     } finally {
       setIsLoading(false);
@@ -104,11 +106,12 @@ export const SignatureManager: React.FC = () => {
         type: "success",
         text: "Signature uploaded successfully",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error uploading signature:", error);
+      const err = error as { response?: { data?: { message?: string } } };
       setMessage({
         type: "error",
-        text: error.response?.data?.message || "Failed to upload signature",
+        text: err.response?.data?.message || "Failed to upload signature",
       });
     } finally {
       setIsLoading(false);
@@ -127,11 +130,12 @@ export const SignatureManager: React.FC = () => {
         type: "success",
         text: "Signature deleted successfully",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error deleting signature:", error);
+      const err = error as { response?: { data?: { message?: string } } };
       setMessage({
         type: "error",
-        text: error.response?.data?.message || "Failed to delete signature",
+        text: err.response?.data?.message || "Failed to delete signature",
       });
     } finally {
       setIsLoading(false);

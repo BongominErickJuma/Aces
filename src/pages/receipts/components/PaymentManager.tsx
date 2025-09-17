@@ -225,7 +225,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
               <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method *</label>
               <select
                 value={paymentData.method}
-                onChange={(e) => setPaymentData({ ...paymentData, method: e.target.value as any })}
+                onChange={(e) => setPaymentData({ ...paymentData, method: e.target.value as "cash" | "bank_transfer" | "mobile_money" })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
               >
                 <option value="cash">Cash</option>

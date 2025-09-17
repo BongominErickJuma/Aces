@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -13,8 +13,6 @@ import {
   Phone,
   Mail,
   Building2,
-  Globe,
-  Home,
   Package,
   Clock,
   Percent,
@@ -59,13 +57,7 @@ const QuotationEditPage: React.FC = () => {
     notes: "",
   });
 
-  useEffect(() => {
-    if (id) {
-      fetchQuotation();
-    }
-  }, [id]);
-
-  const fetchQuotation = async () => {
+  const fetchQuotation = useCallback(async () => {
     if (!id) return;
 
     try {
@@ -109,19 +101,25 @@ const QuotationEditPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const handleInputChange = (section: keyof typeof formData, field: string, value: any) => {
+  useEffect(() => {
+    if (id) {
+      fetchQuotation();
+    }
+  }, [id, fetchQuotation]);
+
+  const handleInputChange = (section: keyof typeof formData, field: string, value: string | number) => {
     setFormData((prev) => ({
       ...prev,
       [section]:
         typeof prev[section] === "object" && !Array.isArray(prev[section])
-          ? { ...(prev[section] as any), [field]: value }
+          ? { ...(prev[section] as Record<string, unknown>), [field]: value }
           : value,
     }));
   };
 
-  const handleServiceChange = (index: number, field: keyof QuotationService, value: any) => {
+  const handleServiceChange = (index: number, field: keyof QuotationService, value: string | number) => {
     const updatedServices = [...formData.services];
     updatedServices[index] = {
       ...updatedServices[index],
@@ -259,7 +257,7 @@ const QuotationEditPage: React.FC = () => {
         notes: formData.notes || undefined,
       };
 
-      const response = await quotationsAPI.updateQuotation(id, updateData);
+      await quotationsAPI.updateQuotation(id, updateData);
       navigate(`/quotations/${id}`, {
         state: { message: "Quotation updated successfully" },
       });
@@ -277,17 +275,6 @@ const QuotationEditPage: React.FC = () => {
       currency: formData.pricing.currency,
       minimumFractionDigits: 0,
     }).format(amount);
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "Office":
-        return <Building2 size={20} className="text-blue-600" />;
-      case "International":
-        return <Globe size={20} className="text-green-600" />;
-      default:
-        return <Home size={20} className="text-purple-600" />;
-    }
   };
 
   if (loading) {

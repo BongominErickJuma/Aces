@@ -72,7 +72,7 @@ export interface AuditLog {
   };
   ipAddress?: string;
   userAgent?: string;
-  details: any;
+  details: Record<string, unknown>;
   createdAt: string;
 }
 
@@ -143,8 +143,15 @@ export interface DashboardStats {
       _id: string;
       quotationNumber: string;
       type: string;
-      client: any;
-      pricing: any;
+      client: {
+        fullName: string;
+        email?: string;
+        phone?: string;
+      };
+      pricing: {
+        totalAmount: number;
+        currency: string;
+      };
       validity: { status: string };
       createdAt: string;
       createdBy: { fullName: string };
@@ -152,8 +159,16 @@ export interface DashboardStats {
     receipts: Array<{
       _id: string;
       receiptNumber: string;
-      client: any;
-      payment: any;
+      client: {
+        fullName: string;
+        email?: string;
+        phone?: string;
+      };
+      payment: {
+        totalAmount: number;
+        currency: string;
+        status: string;
+      };
       createdAt: string;
       createdBy: { fullName: string };
     }>;
@@ -179,9 +194,10 @@ export const adminAPI = {
     try {
       const response = await api.get("/users", { params });
       return response.data;
-    } catch (error: any) {
-      console.error("Error fetching users:", error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || "Failed to fetch users");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      console.error("Error fetching users:", err.response?.data || err.message);
+      throw new Error(err.response?.data?.message || "Failed to fetch users");
     }
   },
 
@@ -189,8 +205,9 @@ export const adminAPI = {
     try {
       const response = await api.get(`/users/${id}`);
       return response.data.data.user;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to fetch user");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch user");
     }
   },
 
@@ -198,8 +215,9 @@ export const adminAPI = {
     try {
       const response = await api.put(`/users/${id}`, updates);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to update user");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to update user");
     }
   },
 
@@ -207,8 +225,9 @@ export const adminAPI = {
     try {
       const response = await api.delete(`/users/${id}`);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to delete user");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to delete user");
     }
   },
 
@@ -216,8 +235,9 @@ export const adminAPI = {
     try {
       const response = await api.delete(`/users/${id}/permanent`);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to permanently delete user");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to permanently delete user");
     }
   },
 
@@ -225,8 +245,9 @@ export const adminAPI = {
     try {
       const response = await api.post("/users/bulk-suspend", { userIds });
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to suspend users");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to suspend users");
     }
   },
 
@@ -234,8 +255,9 @@ export const adminAPI = {
     try {
       const response = await api.post("/users/bulk-reactivate", { userIds });
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to reactivate users");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to reactivate users");
     }
   },
 
@@ -243,8 +265,9 @@ export const adminAPI = {
     try {
       const response = await api.put(`/users/${id}/reactivate`);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to reactivate user");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to reactivate user");
     }
   },
 
@@ -252,8 +275,9 @@ export const adminAPI = {
     try {
       const response = await api.get(`/users/${id}/statistics`);
       return response.data.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to fetch user statistics");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch user statistics");
     }
   },
 
@@ -262,8 +286,9 @@ export const adminAPI = {
     try {
       const response = await api.get("/dashboard/reports/user-performance", { params });
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to fetch user performance report");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch user performance report");
     }
   },
 
@@ -272,8 +297,9 @@ export const adminAPI = {
       const response = await api.get("/dashboard/reports/document-stats", { params });
 
       return response.data.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to fetch document statistics");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch document statistics");
     }
   },
 
@@ -282,8 +308,9 @@ export const adminAPI = {
     try {
       const response = await api.get("/dashboard/stats", { params });
       return response.data.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to fetch dashboard statistics");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch dashboard statistics");
     }
   },
 
@@ -292,8 +319,9 @@ export const adminAPI = {
     try {
       const response = await api.get("/notifications/stats", { params });
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to fetch notification statistics");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch notification statistics");
     }
   },
 
@@ -309,8 +337,9 @@ export const adminAPI = {
     try {
       const response = await api.post("/notifications", notificationData);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to create notification");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to create notification");
     }
   },
 
@@ -320,8 +349,9 @@ export const adminAPI = {
         params: { days },
       });
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to cleanup notifications");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to cleanup notifications");
     }
   },
 
@@ -339,8 +369,9 @@ export const adminAPI = {
       // This endpoint might need to be implemented in the backend
       const response = await api.get("/audit-logs", { params });
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to fetch audit logs");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch audit logs");
     }
   },
 
@@ -349,8 +380,9 @@ export const adminAPI = {
       // This endpoint might need to be implemented in the backend
       const response = await api.get("/audit-logs/stats", { params });
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Failed to fetch audit statistics");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch audit statistics");
     }
   },
 };

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { FileText, Receipt, UserPlus, AlertTriangle, Loader2 } from "lucide-react";
 import { PageLayout } from "../../components/layout";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import QuotationCreateForm from "./components/QuotationCreateForm";
 import ReceiptCreateForm from "./components/ReceiptCreateForm";
 import UserCreateForm from "./components/UserCreateForm";
@@ -64,7 +64,7 @@ const CreatePage: React.FC = () => {
     } else {
       setActiveTab("quotation");
     }
-  }, [searchParams]);
+  }, [searchParams, availableTabs]);
 
   // Update URL when tab changes
   const handleTabChange = (tabId: CreateType) => {

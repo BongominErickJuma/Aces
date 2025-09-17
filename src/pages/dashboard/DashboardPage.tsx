@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FileText, Receipt, Globe, Building, Home, RefreshCw } from "lucide-react";
+import { FileText, Receipt, Globe, Building, Home } from "lucide-react";
 import { PageLayout } from "../../components/layout";
 import StatsCard from "../../components/dashboard/StatsCard";
 import RecentDocuments from "../../components/dashboard/RecentDocuments";
 import { dashboardAPI } from "../../services/dashboard";
 import { receiptsAPI } from "../../services/receipts";
 import { quotationsAPI } from "../../services/quotations";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import type { DashboardStats, Period } from "../../types/dashboard";
 
 const DashboardPage: React.FC = () => {
@@ -17,13 +17,29 @@ const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<Period>("30d");
-  const [refreshing, setRefreshing] = useState(false);
+  const [period] = useState<Period>("30d");
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
 
   const isAdmin = user?.role === "admin";
 
-  const fetchDashboardData = async () => {
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setError(null);
+        const data = await dashboardAPI.getStats(period);
+        setStats(data);
+      } catch (err) {
+        setError("Failed to load dashboard data");
+        console.error("Dashboard error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [period]);
+
+  const handleRefresh = async () => {
     try {
       setError(null);
       const data = await dashboardAPI.getStats(period);
@@ -31,19 +47,7 @@ const DashboardPage: React.FC = () => {
     } catch (err) {
       setError("Failed to load dashboard data");
       console.error("Dashboard error:", err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, [period]);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchDashboardData();
   };
 
   const handleViewDocument = (type: "quotation" | "receipt", id: string) => {
@@ -77,7 +81,9 @@ const DashboardPage: React.FC = () => {
           : stats?.recentActivity.receipts.find((r) => r._id === id);
 
       const documentNumber =
-        type === "quotation" ? (docData as any)?.quotationNumber || id : (docData as any)?.receiptNumber || id;
+        type === "quotation"
+          ? (docData as { quotationNumber?: string })?.quotationNumber || id
+          : (docData as { receiptNumber?: string })?.receiptNumber || id;
 
       link.download = `${type}-${documentNumber}.pdf`;
       document.body.appendChild(link);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -7,7 +7,6 @@ import {
   Receipt,
   Plus,
   Shield,
-  User,
   Bell,
   LogOut,
   Menu,
@@ -30,7 +29,7 @@ const Header: React.FC = () => {
   const [notificationLoading, setNotificationLoading] = useState(false);
 
   // Load notifications data
-  const loadNotificationData = async () => {
+  const loadNotificationData = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -47,19 +46,19 @@ const Header: React.FC = () => {
     } finally {
       setNotificationLoading(false);
     }
-  };
+  }, [user]);
 
   // Load notification data on component mount and when user changes
   useEffect(() => {
     loadNotificationData();
-  }, [user]);
+  }, [loadNotificationData]);
 
   // Refresh notifications when dropdown opens
   useEffect(() => {
     if (isNotificationOpen) {
       loadNotificationData();
     }
-  }, [isNotificationOpen]);
+  }, [isNotificationOpen, loadNotificationData]);
 
   const handleLogout = async () => {
     try {
@@ -145,7 +144,11 @@ const Header: React.FC = () => {
           {/* Logo */}
           <motion.div whileHover={{ scale: 1.02 }} className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
             <Link to="/dashboard" className="flex items-center space-x-2 sm:space-x-3">
-              <img src="/img/Aces_logo.svg" alt="Aces Movers Logo" className="h-8 sm:h-10 xl:h-12 w-auto object-contain" />
+              <img
+                src="/img/Aces_logo.svg"
+                alt="Aces Movers Logo"
+                className="h-8 sm:h-10 xl:h-12 w-auto object-contain"
+              />
             </Link>
           </motion.div>
 
@@ -309,7 +312,9 @@ const Header: React.FC = () => {
                     </span>
                   </div>
                 )}
-                <span className="hidden sm:block text-xs xl:text-sm font-medium truncate max-w-16 xl:max-w-24 2xl:max-w-32">{user?.fullName || "User"}</span>
+                <span className="hidden sm:block text-xs xl:text-sm font-medium truncate max-w-16 xl:max-w-24 2xl:max-w-32">
+                  {user?.fullName || "User"}
+                </span>
               </Link>
             </motion.div>
 
@@ -331,7 +336,11 @@ const Header: React.FC = () => {
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="xl:hidden p-1.5 xl:p-2 text-gray-600 hover:text-aces-green hover:bg-gray-50 rounded-lg transition-colors"
             >
-              {isMobileMenuOpen ? <X size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Menu size={16} className="sm:w-[18px] sm:h-[18px]" />}
+              {isMobileMenuOpen ? (
+                <X size={16} className="sm:w-[18px] sm:h-[18px]" />
+              ) : (
+                <Menu size={16} className="sm:w-[18px] sm:h-[18px]" />
+              )}
             </motion.button>
           </div>
         </div>

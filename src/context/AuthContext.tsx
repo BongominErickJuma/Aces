@@ -3,7 +3,7 @@ import type { User, LoginCredentials } from "../types/auth";
 import { authAPI, tokenManager } from "../services/api";
 import { AuthContext, type AuthContextType } from "./auth";
 
-export { useAuth } from "./useAuth";
+// Note: useAuth hook is exported from ./useAuth file directly to avoid react-refresh warning
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -25,14 +25,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Check if we have a stored access token first
       const hasToken = tokenManager.getAccessToken();
-      
+
       if (!hasToken) {
         // Try to refresh using cookie if available
         try {
           await authAPI.refreshToken();
           const userData = await authAPI.getProfile();
           setUser(userData);
-        } catch (error) {
+        } catch {
           // No valid session
           setUser(null);
         }
@@ -41,20 +41,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           const userData = await authAPI.getProfile();
           setUser(userData);
-        } catch (error) {
+        } catch {
           // Token might be expired, try refresh
           try {
             await authAPI.refreshToken();
             const userData = await authAPI.getProfile();
             setUser(userData);
-          } catch (refreshError) {
+          } catch {
             // Both failed, clear everything
             setUser(null);
             tokenManager.clearAccessToken();
           }
         }
       }
-    } catch (error) {
+    } catch {
       // Any unexpected error
       setUser(null);
       tokenManager.clearAccessToken();

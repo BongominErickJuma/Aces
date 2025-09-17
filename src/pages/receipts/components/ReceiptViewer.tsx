@@ -1,19 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  Download,
-  Receipt,
-  Calendar,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  AlertCircle,
-  Loader2,
-  Building,
-  DollarSign,
-} from "lucide-react";
+import { Download, Receipt, Calendar, User, Mail, Phone, MapPin, AlertCircle, Loader2, DollarSign } from "lucide-react";
 import { clsx } from "clsx";
 import { PageLayout } from "../../../components/layout";
 import PaymentManager from "./PaymentManager";
@@ -32,7 +20,7 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
 
   useEffect(() => {
     fetchReceipt();
-  }, [receiptId]);
+  }, [receiptId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchReceipt = async () => {
     try {
@@ -301,15 +289,6 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
                   </div>
                 </div>
               )}
-              {receipt.client.company && (
-                <div className="flex items-center gap-3">
-                  <Building className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-600">Company</p>
-                    <p className="font-medium text-gray-900">{receipt.client.company}</p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -328,7 +307,9 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Moving Date</p>
-                  <p className="font-medium text-gray-900">{formatDate(receipt.locations.movingDate)}</p>
+                  <p className="font-medium text-gray-900">
+                    {receipt.locations.movingDate ? formatDate(receipt.locations.movingDate) : "Not specified"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -408,12 +389,7 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
                   {receipt.commitmentFee.commitmentReceiptId && (
                     <div>
                       <p className="text-sm text-purple-600 font-medium">Commitment Receipt</p>
-                      <p className="text-purple-900 font-medium">
-                        {receipt.commitmentFee.commitmentReceiptId.receiptNumber}
-                      </p>
-                      <p className="text-xs text-purple-600">
-                        {formatDate(receipt.commitmentFee.commitmentReceiptId.createdAt)}
-                      </p>
+                      <p className="text-purple-900 font-medium">{receipt.commitmentFee.commitmentReceiptId}</p>
                     </div>
                   )}
                   {receipt.commitmentFee.amount && (

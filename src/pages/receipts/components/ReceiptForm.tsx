@@ -12,7 +12,6 @@ import {
   FileText,
   CheckCircle,
   CreditCard,
-  Calendar,
   User,
   MapPin,
 } from "lucide-react";
@@ -26,7 +25,7 @@ interface ReceiptFormProps {
   onCancel: () => void;
 }
 
-interface FormData extends CreateReceiptData {}
+type FormData = CreateReceiptData;
 
 const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) => {
   const [loading, setLoading] = useState(false);
@@ -89,7 +88,7 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
   const watchedServices = watch("services");
   const watchedCurrency = watch("payment.currency");
   const receiptType = watch("receiptType");
-  const selectedQuotationId = watch("quotationId");
+  // const selectedQuotationId = watch("quotationId"); // Unused variable
 
   // Load existing receipt data for editing
   useEffect(() => {
@@ -170,6 +169,7 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
         description: `${service.name} - ${service.description}`,
         amount: service.unitPrice,
         quantity: service.quantity,
+        total: service.unitPrice * service.quantity,
       }));
 
       setValue("services", convertedServices);
@@ -200,6 +200,7 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
       description: "",
       amount: 0,
       quantity: 1,
+      total: 0,
     });
   };
 
@@ -215,21 +216,6 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
         return <CreditCard size={20} className="text-orange-600" />;
       default:
         return <FileText size={20} className="text-gray-600" />;
-    }
-  };
-
-  const getReceiptTypeLabel = (type: string) => {
-    switch (type) {
-      case "box":
-        return "Box Receipt";
-      case "commitment":
-        return "Commitment Receipt";
-      case "final":
-        return "Final Receipt";
-      case "one_time":
-        return "One-Time Payment";
-      default:
-        return type;
     }
   };
 
@@ -304,25 +290,25 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Receipt Type</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { 
-                value: "box", 
-                label: "Box Receipt", 
-                description: "For box storage and packing services"
+              {
+                value: "box",
+                label: "Box Receipt",
+                description: "For box storage and packing services",
               },
-              { 
-                value: "commitment", 
-                label: "Commitment Receipt", 
-                description: "Initial payment to secure moving service"
+              {
+                value: "commitment",
+                label: "Commitment Receipt",
+                description: "Initial payment to secure moving service",
               },
-              { 
-                value: "final", 
-                label: "Final Receipt", 
-                description: "Final payment after move completion"
+              {
+                value: "final",
+                label: "Final Receipt",
+                description: "Final payment after move completion",
               },
-              { 
-                value: "one_time", 
-                label: "One-Time Payment", 
-                description: "Complete payment for full service"
+              {
+                value: "one_time",
+                label: "One-Time Payment",
+                description: "Complete payment for full service",
               },
             ].map((type) => (
               <label key={type.value} className="cursor-pointer">
@@ -391,7 +377,7 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
                   {quotations.map((quotation) => (
                     <option key={quotation._id} value={quotation._id}>
                       {quotation.quotationNumber} - {quotation.client.name} (
-                      {formatCurrency(quotation.pricing.totalAmount, quotation.pricing.currency)})
+                      {formatCurrency(quotation.pricing.totalAmount)}
                     </option>
                   ))}
                 </select>
@@ -542,7 +528,7 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
                       type="text"
                       {...register(`services.${index}.description`, { required: "Description is required" })}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                      placeholder={receiptRequirements.servicePlaceholder}
+                      placeholder="Enter service description"
                     />
                     {errors.services?.[index]?.description && (
                       <p className="text-red-600 text-xs mt-1">{errors.services[index].description.message}</p>
