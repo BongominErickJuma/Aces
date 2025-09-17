@@ -22,9 +22,6 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
   loading = false,
   onViewDocument,
   onDownloadDocument,
-  onDeleteDocument,
-  onShareDocument,
-  isAdmin = false,
   downloadingIds = new Set(),
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
