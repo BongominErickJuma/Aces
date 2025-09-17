@@ -19,7 +19,6 @@ let accessToken: string | null = null;
 api.interceptors.request.use(
   (config) => {
     console.log(`[API] Making ${config.method?.toUpperCase()} request to: ${config.url}`);
-    console.log(`[API] Full URL:`, config.baseURL + config.url);
     console.log(`[API] Request config:`, config);
 
     if (accessToken) {
