@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -11,72 +11,44 @@ import {
   LogOut,
   Menu,
   X,
-  Eye,
-  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { notificationAPI } from "../../services/notifications";
-import type { Notification } from "../../types/notification";
+import type { PendingReviewResponse, UnreadCountResponse } from "../../types/notification";
 
 const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [recentNotifications, setRecentNotifications] = useState<Notification[]>([]);
-  const [notificationLoading, setNotificationLoading] = useState(false);
-  const notificationRef = useRef<HTMLDivElement>(null);
+  const [pendingReviewCount, setPendingReviewCount] = useState(0);
 
-  // Load notifications data
+  // Load notification count
   const loadNotificationData = useCallback(async () => {
     if (!user) return;
 
     try {
-      setNotificationLoading(true);
-      const [countResponse, notificationsResponse] = await Promise.all([
-        notificationAPI.getUnreadCount(),
-        notificationAPI.getUserNotifications({ page: 1, limit: 5, unreadOnly: true }),
-      ]);
-
+      // Load basic data
+      const countResponse: UnreadCountResponse = await notificationAPI.getUnreadCount();
       setUnreadCount(countResponse.data.count);
-      setRecentNotifications(notificationsResponse.data.docs);
+
+      // Load admin data if user is admin
+      if (user.role === "admin") {
+        const pendingResponse: PendingReviewResponse = await notificationAPI.getPendingReview();
+        setPendingReviewCount(pendingResponse.data.count || 0);
+      }
     } catch (error) {
       console.error("Failed to load notifications:", error);
-    } finally {
-      setNotificationLoading(false);
     }
-  }, [user]);
+  }, [user?.role]);
 
   // Load notification data on component mount and when user changes
   useEffect(() => {
-    loadNotificationData();
-  }, [loadNotificationData]);
-
-  // Refresh notifications when dropdown opens
-  useEffect(() => {
-    if (isNotificationOpen) {
+    if (user) {
       loadNotificationData();
     }
-  }, [isNotificationOpen, loadNotificationData]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (isNotificationOpen && notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
-        setIsNotificationOpen(false);
-      }
-    };
-
-    if (isNotificationOpen) {
-      document.addEventListener('click', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [isNotificationOpen]);
+  }, [user?.id, loadNotificationData]);
 
   const handleLogout = async () => {
     try {
@@ -87,33 +59,6 @@ const Header: React.FC = () => {
     }
   };
 
-  // Handle mark notification as read
-  const handleMarkAsRead = async (notificationId: string) => {
-    try {
-      await notificationAPI.markAsRead(notificationId);
-      await loadNotificationData();
-    } catch (error) {
-      console.error("Failed to mark notification as read:", error);
-    }
-  };
-
-  // Handle notification action click
-  const handleNotificationClick = async (notification: Notification) => {
-    if (!notification.read) {
-      await handleMarkAsRead(notification._id);
-    }
-
-    if (notification.actionUrl) {
-      // Internal navigation
-      if (notification.actionUrl.startsWith("/")) {
-        navigate(notification.actionUrl);
-        setIsNotificationOpen(false);
-      } else {
-        // External link
-        window.open(notification.actionUrl, "_blank");
-      }
-    }
-  };
 
   const navigationItems = [
     {
@@ -197,16 +142,9 @@ const Header: React.FC = () => {
           {/* Right Section */}
           <div className="flex items-center space-x-1 sm:space-x-2 xl:space-x-3">
             {/* Notifications */}
-            <motion.div whileHover={{ scale: 1.1 }} className="relative" ref={notificationRef}>
-              {/* Desktop: Show dropdown, Mobile/Tablet: Navigate to page */}
+            <motion.div whileHover={{ scale: 1.1 }} className="relative">
               <button
-                onClick={() => {
-                  if (window.innerWidth >= 1200) {
-                    setIsNotificationOpen(!isNotificationOpen);
-                  } else {
-                    navigate('/notifications');
-                  }
-                }}
+                onClick={() => navigate("/notifications")}
                 className="p-1.5 xl:p-2 text-gray-600 hover:text-aces-green hover:bg-gray-50 rounded-lg transition-colors"
               >
                 <Bell size={16} className="xl:w-[18px] xl:h-[18px]" />
@@ -216,98 +154,6 @@ const Header: React.FC = () => {
                   </span>
                 )}
               </button>
-
-              {/* Notification Dropdown - Only show on desktop (xl breakpoint = 1280px+) */}
-              <AnimatePresence>
-                {isNotificationOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                    className="hidden xl:block absolute right-0 mt-2 w-96 max-w-md bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden"
-                  >
-                    {/* Header */}
-                    <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-                    </div>
-
-                    {/* Loading */}
-                    {notificationLoading ? (
-                      <div className="px-4 py-8 text-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-aces-green mx-auto"></div>
-                        <p className="text-sm text-gray-500 mt-2">Loading...</p>
-                      </div>
-                    ) : recentNotifications.length === 0 ? (
-                      <div className="px-4 py-8 text-center">
-                        <Bell className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">No new notifications</p>
-                      </div>
-                    ) : (
-                      <div className="max-h-80 overflow-y-auto">
-                        {recentNotifications.map((notification) => (
-                          <div
-                            key={notification._id}
-                            className="px-4 py-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors"
-                            onClick={() => handleNotificationClick(notification)}
-                          >
-                            <div className="flex items-start gap-3">
-                              {/* Priority indicator */}
-                              <div
-                                className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                                  notification.priority === "urgent"
-                                    ? "bg-red-500"
-                                    : notification.priority === "high"
-                                    ? "bg-orange-500"
-                                    : notification.priority === "normal"
-                                    ? "bg-blue-500"
-                                    : "bg-gray-400"
-                                }`}
-                              />
-
-                              {/* Content */}
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-medium text-gray-900 truncate">{notification.title}</h4>
-                                <p className="text-xs text-gray-600 mt-1 line-clamp-2">{notification.message}</p>
-                                <div className="flex items-center justify-between mt-2">
-                                  <span className="text-xs text-gray-500 truncate">
-                                    {notification.timeAgo || new Date(notification.createdAt).toLocaleDateString()}
-                                  </span>
-                                  <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                                    {notification.actionUrl && <ExternalLink className="w-3 h-3 text-gray-400" />}
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleMarkAsRead(notification._id);
-                                      }}
-                                      className="p-1 text-gray-400 hover:text-aces-green transition-colors"
-                                      title="Mark as read"
-                                    >
-                                      <Eye className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Footer */}
-                    {recentNotifications.length > 0 && (
-                      <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
-                        <Link
-                          to="/notifications"
-                          onClick={() => setIsNotificationOpen(false)}
-                          className="block text-center text-sm text-aces-green hover:text-aces-green/80 font-medium"
-                        >
-                          View All Notifications
-                        </Link>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </motion.div>
 
             {/* Profile Dropdown */}

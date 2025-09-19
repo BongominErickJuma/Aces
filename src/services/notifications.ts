@@ -8,6 +8,13 @@ import type {
   DeleteNotificationResponse,
   NotificationStatsResponse,
   CreateNotificationRequest,
+  AdminSummaryResponse,
+  PendingReviewResponse,
+  BulkDeleteRequest,
+  BulkDeleteResponse,
+  ExtendLifecycleRequest,
+  ExtendLifecycleResponse,
+  SystemHealthResponse,
 } from "../types/notification";
 
 export const notificationAPI = {
@@ -100,7 +107,9 @@ export const notificationAPI = {
   /**
    * Create notification (Admin only)
    */
-  createNotification: async (data: CreateNotificationRequest): Promise<{ success: boolean; message: string; data: Record<string, unknown> }> => {
+  createNotification: async (
+    data: CreateNotificationRequest
+  ): Promise<{ success: boolean; message: string; data: Record<string, unknown> }> => {
     try {
       const response = await api.post("/notifications", data);
       return response.data;
@@ -126,13 +135,174 @@ export const notificationAPI = {
   /**
    * Delete old notifications (Admin only)
    */
-  cleanupOldNotifications: async (days: number = 90): Promise<{ success: boolean; message: string; data: { deletedCount: number } }> => {
+  cleanupOldNotifications: async (
+    days: number = 90
+  ): Promise<{ success: boolean; message: string; data: { deletedCount: number } }> => {
     try {
       const response = await api.delete(`/notifications/cleanup?days=${days}`);
       return response.data;
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       throw new Error(err.response?.data?.message || "Failed to cleanup old notifications");
+    }
+  },
+
+  // New Admin Lifecycle Management APIs
+  /**
+   * Get admin notification summary with grouping
+   */
+  getAdminSummary: async (params?: Record<string, unknown>): Promise<AdminSummaryResponse> => {
+    try {
+      const response = await api.get("/notifications/admin/summary", { params });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch admin summary");
+    }
+  },
+
+  /**
+   * Get notifications pending review (30+ days old)
+   */
+  getPendingReview: async (params?: Record<string, unknown>): Promise<PendingReviewResponse> => {
+    try {
+      const response = await api.get("/notifications/admin/pending-review", { params });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch pending review notifications");
+    }
+  },
+
+  /**
+   * Bulk delete notifications
+   */
+  bulkDelete: async (data: BulkDeleteRequest): Promise<BulkDeleteResponse> => {
+    try {
+      const response = await api.delete("/notifications/admin/bulk-delete", { data });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to bulk delete notifications");
+    }
+  },
+
+  /**
+   * Extend notification lifecycle
+   */
+  extendLifecycle: async (id: string, data: ExtendLifecycleRequest): Promise<ExtendLifecycleResponse> => {
+    try {
+      const response = await api.put(`/notifications/admin/${id}/extend`, data);
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to extend notification lifecycle");
+    }
+  },
+
+  /**
+   * Update admin settings
+   */
+  updateAdminSettings: async (
+    settings: Record<string, unknown>
+  ): Promise<{ success: boolean; message: string; data: Record<string, unknown> }> => {
+    try {
+      const response = await api.put("/notifications/admin/settings", settings);
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to update admin settings");
+    }
+  },
+
+  /**
+   * Get notification analytics
+   */
+  getAnalytics: async (
+    params?: Record<string, unknown>
+  ): Promise<{ success: boolean; message: string; data: Record<string, unknown> }> => {
+    try {
+      const response = await api.get("/notifications/admin/analytics", { params });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch analytics");
+    }
+  },
+
+  /**
+   * Run lifecycle job manually
+   */
+  runLifecycleJob: async (): Promise<{ success: boolean; message: string; data: Record<string, unknown> }> => {
+    try {
+      const response = await api.post("/notifications/admin/run-lifecycle-job");
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to run lifecycle job");
+    }
+  },
+
+  /**
+   * Get system health status
+   */
+  getSystemHealth: async (): Promise<SystemHealthResponse> => {
+    try {
+      const response = await api.get("/notifications/admin/system-health");
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch system health");
+    }
+  },
+
+  /**
+   * Get group statistics breakdown
+   */
+  getGroupStats: async (): Promise<{
+    success: boolean;
+    message: string;
+    data: {
+      groupStats: Array<{
+        type: string;
+        count: number;
+        notificationCount: number;
+        description: string;
+        readCount: number;
+        unreadCount: number;
+        latestActivity: string;
+        oldestActivity: string;
+        groups: Array<{
+          groupName: string;
+          displayName: string;
+          notificationCount: number;
+          readCount: number;
+          unreadCount: number;
+          latestCreated: string;
+          oldestCreated: string;
+          sampleNotifications: Array<{
+            title: string;
+            message: string;
+            createdAt: string;
+            priority: string;
+            isRead: boolean;
+          }>;
+        }>;
+      }>;
+      totalGroups: number;
+      summary: {
+        totalNotificationTypes: number;
+        totalNotifications: number;
+        totalGroupsCount: number;
+      };
+    };
+  }> => {
+    try {
+      const response = await api.get("/notifications/admin/group-stats");
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      throw new Error(err.response?.data?.message || "Failed to fetch group statistics");
     }
   },
 };

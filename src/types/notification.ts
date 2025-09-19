@@ -42,6 +42,15 @@ export interface Notification {
   timeAgo?: string;
   createdAt: string;
   updatedAt: string;
+  // New lifecycle management fields
+  notificationGroup?: string;
+  recipientUserIds?: string[];
+  readByUsers?: Array<{ userId: string; readAt: string }>;
+  isReadByAllUsers?: boolean;
+  adminManaged?: boolean;
+  lifecycleStatus?: "active" | "pending_review" | "extended" | "archived";
+  reminderSentAt?: string;
+  extendedUntil?: string;
 }
 
 export interface NotificationPagination {
@@ -123,5 +132,85 @@ export interface MarkAllAsReadResponse {
 export interface DeleteNotificationResponse {
   success: boolean;
   data: null;
+  message: string;
+}
+
+// New admin management types
+export interface NotificationGroup {
+  _id: string;
+  count: number;
+  types: string[];
+  readPercentage: number;
+  daysSinceOldest: number;
+  isUrgent: boolean;
+  sampleNotification: Notification;
+}
+
+export interface AdminSummaryResponse {
+  success: boolean;
+  data: {
+    groups: NotificationGroup[];
+    totalNotifications: number;
+    totalUnread: number;
+    pendingReviewCount: number;
+    overallStats?: Array<{
+      totalNotifications: number;
+      totalReadByAll: number;
+    }>;
+  };
+  message: string;
+}
+
+export interface PendingReviewResponse {
+  success: boolean;
+  data: {
+    notifications: Notification[];
+    count: number;
+  };
+  message: string;
+}
+
+export interface BulkDeleteRequest {
+  confirmDeletion: boolean;
+  criteria?: Record<string, unknown>;
+  notificationIds?: string[];
+}
+
+export interface BulkDeleteResponse {
+  success: boolean;
+  data: {
+    deletedCount: number;
+  };
+  message: string;
+}
+
+export interface ExtendLifecycleRequest {
+  extendDays?: number;
+  reason?: string;
+}
+
+export interface ExtendLifecycleResponse {
+  success: boolean;
+  data: Notification;
+  message: string;
+}
+
+export interface SystemHealth {
+  healthScore: {
+    score: number;
+    level: string;
+    issues: string[];
+  };
+  jobs: Record<string, unknown>;
+  alerts: Array<{
+    level: string;
+    message: string;
+    action: string;
+  }>;
+}
+
+export interface SystemHealthResponse {
+  success: boolean;
+  data: SystemHealth;
   message: string;
 }
