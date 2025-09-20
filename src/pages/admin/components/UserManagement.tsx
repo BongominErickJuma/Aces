@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -16,6 +16,7 @@ import {
 import { adminAPI, type AdminUser } from "../../../services/admin";
 import UserTableView from "./UserTableView";
 import UserCardView from "./UserCardView";
+import { UserManagementSkeleton } from "../../../components/skeletons";
 
 interface UserManagementProps {
   isAdmin: boolean;
@@ -66,6 +67,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
   }>({ role: "user", status: "active" });
   const [updatingUser, setUpdatingUser] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const isResettingFilters = useRef(false);
   const [actionModal, setActionModal] = useState<{
     isOpen: boolean;
     user: AdminUser | null;
@@ -89,7 +91,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
   const [reactivateProgress, setReactivateProgress] = useState({ current: 0, total: 0 });
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 20,
+    limit: 10,
     total: 0,
     totalPages: 0,
     hasNext: false,
@@ -97,12 +99,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
   });
 
   const fetchUsers = useCallback(
-    async (page: number = currentPage) => {
+    async (page: number) => {
       try {
         setLoading(true);
         const params = {
           page: page,
-          limit: 20,
+          limit: 10,
           search: searchQuery || undefined,
           role: roleFilter || undefined,
           status: statusFilter || undefined,
@@ -120,7 +122,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
           setPagination(
             response.data.pagination || {
               page: page,
-              limit: 20,
+              limit: 10,
               total: 0,
               totalPages: 0,
               hasNext: false,
@@ -149,18 +151,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
         setLoading(false);
       }
     },
-    [currentPage, searchQuery, roleFilter, statusFilter, currentUser]
+    [searchQuery, roleFilter, statusFilter, currentUser]
   );
 
   // Fetch users when filters change (reset to page 1)
   useEffect(() => {
+    isResettingFilters.current = true;
     setCurrentPage(1);
-    fetchUsers(1);
+    fetchUsers(1).finally(() => {
+      isResettingFilters.current = false;
+    });
   }, [searchQuery, roleFilter, statusFilter, fetchUsers]);
 
-  // Fetch users when page changes
+  // Fetch users when page changes (but not when resetting filters)
   useEffect(() => {
-    fetchUsers(currentPage);
+    if (!isResettingFilters.current) {
+      fetchUsers(currentPage);
+    }
   }, [currentPage, fetchUsers]);
 
   const handleToggleUserSelection = (userId: string) => {
@@ -226,7 +233,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
 
       // Clear selection after successful bulk suspend
       setSelectedUsers(new Set());
-      fetchUsers(); // Reload data
+      fetchUsers(currentPage); // Reload data
     } catch (err) {
       console.error("Failed to suspend users:", err);
       alert("Failed to suspend users. Please try again.");
@@ -271,7 +278,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
 
       // Clear selection after successful bulk reactivate
       setSelectedUsers(new Set());
-      fetchUsers(); // Reload data
+      fetchUsers(currentPage); // Reload data
     } catch (err) {
       console.error("Failed to reactivate users:", err);
       alert("Failed to reactivate users. Please try again.");
@@ -301,7 +308,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
           break;
       }
       setActionModal({ isOpen: false, user: null, action: null });
-      fetchUsers(); // Refresh the list
+      fetchUsers(currentPage); // Refresh the list
     } catch (error) {
       console.error(`Failed to ${actionModal.action} user:`, error);
       alert(`Failed to ${actionModal.action} user. Please try again.`);
@@ -428,6 +435,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
+
+  if (loading) {
+    return <UserManagementSkeleton />;
+  }
 
   return (
     <div className="space-y-6">

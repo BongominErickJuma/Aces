@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { quotationsAPI, type CreateQuotationData } from "../../../services/quotations";
 import { Button } from "../../../components/ui/Button";
+import QuotationPreview from "./QuotationPreview";
 
 interface QuotationCreateFormProps {
   onCancel: () => void;
@@ -61,9 +62,8 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
       pricing: {
         currency: "UGX",
         discount: 0,
-        taxRate: 0.18,
+        taxRate: 0,
       },
-      termsAndConditions: "",
       notes: "",
     },
   });
@@ -159,6 +159,32 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
     { id: 4, title: "Pricing", icon: DollarSign },
   ];
 
+  const watchedFormData = {
+    type: quotationType,
+    client: {
+      name: watch("client.name") || "",
+      phone: watch("client.phone") || "",
+      email: watch("client.email") || "",
+      company: watch("client.company") || "",
+    },
+    locations: {
+      from: watch("locations.from") || "",
+      to: watch("locations.to") || "",
+      movingDate: watch("locations.movingDate") || "",
+    },
+    services: watchedServices || [],
+    pricing: {
+      currency: watchedCurrency || "UGX",
+      discount: watchedDiscount || 0,
+      taxRate: watchedTaxRate || 0,
+      subtotal,
+      discountAmount,
+      taxAmount,
+      totalAmount,
+    },
+    notes: watch("notes") || "",
+  };
+
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* Error Alert */}
@@ -175,38 +201,41 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
         </motion.div>
       )}
 
-      {/* Progress Steps */}
-      <div className="bg-gray-50 rounded-lg p-3 lg:p-4">
-        <div className="flex items-center justify-between">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            const isActive = currentStep === step.id;
-            const isCompleted = currentStep > step.id;
+      {/* Main Content - Flex Layout with Form and Preview */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Form Section */}
+        <div className="flex-1 lg:w-1/2 space-y-4 lg:space-y-6">
+          {/* Progress Steps */}
+          <div className="bg-gray-50 rounded-lg p-3 lg:p-4">
+            <div className="flex items-center justify-between">
+              {steps.map((step, index) => {
+                const Icon = step.icon;
+                const isActive = currentStep === step.id;
+                const isCompleted = currentStep > step.id;
 
-            return (
-              <div key={step.id} className="flex items-center">
-                <div
-                  className={`flex items-center space-x-1 lg:space-x-2 px-2 lg:px-3 py-2 rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-aces-green text-white"
-                      : isCompleted
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-200 text-gray-500"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span className="text-xs lg:text-sm font-medium hidden lg:inline">{step.title}</span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className={`w-4 lg:w-8 h-0.5 mx-1 lg:mx-2 ${isCompleted ? "bg-green-300" : "bg-gray-300"}`} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 lg:space-y-8">
+                return (
+                  <div key={step.id} className="flex items-center">
+                    <div
+                      className={`flex items-center space-x-1 lg:space-x-2 px-2 lg:px-3 py-2 rounded-lg transition-colors ${
+                        isActive
+                          ? "bg-aces-green text-white"
+                          : isCompleted
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-200 text-gray-500"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="text-xs lg:text-sm font-medium hidden lg:inline">{step.title}</span>
+                    </div>
+                    {index < steps.length - 1 && (
+                      <div className={`w-4 lg:w-8 h-0.5 mx-1 lg:mx-2 ${isCompleted ? "bg-green-300" : "bg-gray-300"}`} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 lg:space-y-8">
         {/* Step 1: Basic Information */}
         {currentStep === 1 && (
           <div className="space-y-6">
@@ -547,26 +576,14 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
             </div>
 
             {/* Additional Information */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Terms and Conditions</label>
-                <textarea
-                  {...register("termsAndConditions")}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                  placeholder="Enter terms and conditions..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                <textarea
-                  {...register("notes")}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                  placeholder="Additional notes or comments..."
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+              <textarea
+                {...register("notes")}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                placeholder="Additional notes or comments..."
+              />
             </div>
           </div>
         )}
@@ -618,7 +635,14 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
             )}
           </div>
         </div>
-      </form>
+          </form>
+        </div>
+
+        {/* Preview Section */}
+        <div className="flex-1 lg:w-1/2 lg:sticky lg:top-6 lg:self-start">
+          <QuotationPreview data={watchedFormData} />
+        </div>
+      </div>
     </div>
   );
 };

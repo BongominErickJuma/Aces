@@ -18,6 +18,8 @@ import {
 import { PageLayout } from "../../components/layout";
 import GroupStatsModal from "../../components/notifications/GroupStatsModal";
 import BulkDeleteModal from "../../components/notifications/BulkDeleteModal";
+import NotificationsSkeleton from "../../components/skeletons/NotificationsSkeleton";
+import NotificationsAdminSkeleton from "../../components/skeletons/NotificationsAdminSkeleton";
 import { notificationAPI } from "../../services/notifications";
 import { useAuth } from "../../hooks/useAuth";
 import type {
@@ -34,6 +36,7 @@ const NotificationsPage: React.FC = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<NotificationPagination | null>(null);
   const [loading, setLoading] = useState(true);
+  const [adminLoading, setAdminLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"unread" | "read" | "manage">("unread");
   const [selectedType] = useState<NotificationType | "all">("all");
@@ -99,6 +102,7 @@ const NotificationsPage: React.FC = () => {
 
         if (activeTab === "manage" && user?.role === "admin") {
           // Load admin data
+          setAdminLoading(true);
           const [summaryResponse, pendingResponse, healthResponse] = await Promise.all([
             notificationAPI.getAdminSummary(),
             notificationAPI.getPendingReview(),
@@ -107,6 +111,7 @@ const NotificationsPage: React.FC = () => {
           setAdminSummary(summaryResponse.data);
           setPendingReview(pendingResponse.data);
           setSystemHealth(healthResponse.data);
+          setAdminLoading(false);
         } else {
           // Load regular notifications
           let unreadOnlyParam: boolean | undefined = undefined;
@@ -140,6 +145,7 @@ const NotificationsPage: React.FC = () => {
   const loadNotifications = async (page = 1) => {
     try {
       setLoading(true);
+
       let unreadOnlyParam: boolean | undefined = undefined;
       if (activeTab === "unread") {
         unreadOnlyParam = true;
@@ -361,25 +367,19 @@ const NotificationsPage: React.FC = () => {
 
   if (loading && !notifications) {
     return (
-      <PageLayout>
-        <div className="flex items-center justify-center min-h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-aces-green"></div>
-        </div>
+      <PageLayout title="Notifications">
+        <NotificationsSkeleton />
       </PageLayout>
     );
   }
 
   return (
-    <PageLayout>
+    <PageLayout title="Notifications">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
-                <Bell className="w-6 h-6 sm:w-8 sm:h-8 text-aces-green" />
-                Notifications
-              </h1>
               <p className="text-sm sm:text-base text-gray-600 mt-1">Stay updated with your system activities</p>
             </div>
 
@@ -413,14 +413,15 @@ const NotificationsPage: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div>
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-1 px-4">
+            <nav className="flex space-x-1">
               <button
                 onClick={() => {
                   setActiveTab("unread");
                   setCurrentPage(1);
                   setSelectedNotifications(new Set());
+                  setAdminLoading(false);
                 }}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === "unread"
@@ -438,6 +439,7 @@ const NotificationsPage: React.FC = () => {
                   setActiveTab("read");
                   setCurrentPage(1);
                   setSelectedNotifications(new Set());
+                  setAdminLoading(false);
                 }}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === "read"
@@ -456,6 +458,7 @@ const NotificationsPage: React.FC = () => {
                     setActiveTab("manage");
                     setCurrentPage(1);
                     setSelectedNotifications(new Set());
+                    setAdminLoading(true);
                   }}
                   className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === "manage"
@@ -526,9 +529,9 @@ const NotificationsPage: React.FC = () => {
             onExtendLifecycle={handleExtendLifecycle}
             onBulkDeleteRead={handleBulkDeleteRead}
             onShowGroupStats={handleShowGroupStats}
-            loading={loading}
+            loading={adminLoading || (!adminSummary && !pendingReview && !systemHealth)}
           />
-        ) : (
+        ) : activeTab !== "manage" ? (
           // Regular Notifications List
           notifications && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -747,7 +750,7 @@ const NotificationsPage: React.FC = () => {
               )}
             </div>
           )
-        )}
+        ) : null}
 
         {/* Group Stats Modal */}
         <GroupStatsModal
@@ -791,13 +794,7 @@ const AdminManageTab: React.FC<{
   loading,
 }) => {
   if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-aces-green"></div>
-        </div>
-      </div>
-    );
+    return <NotificationsAdminSkeleton />;
   }
 
   return (

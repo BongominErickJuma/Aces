@@ -139,11 +139,6 @@ const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                       Groups organize related notifications together. For example, all notifications about a specific
                       document or all user creation notifications from the same day are grouped together.
                     </p>
-                    <p className="text-sm text-blue-800">
-                      <strong>Click on any notification type below</strong> to see the specific groups and sample
-                      notifications within each group. This detailed breakdown shows exactly which notifications are
-                      grouped together and why.
-                    </p>
                   </div>
 
                   {/* Stats List */}

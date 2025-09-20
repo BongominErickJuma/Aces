@@ -1,8 +1,24 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Receipt, Search, Filter, Download, Eye, ChevronDown, Loader2 } from "lucide-react";
+import {
+  FileText,
+  Receipt,
+  Search,
+  Filter,
+  Download,
+  Eye,
+  ChevronDown,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Clock,
+  AlertTriangle,
+  CreditCard
+} from "lucide-react";
 import { clsx } from "clsx";
 import type { QuotationSummary, ReceiptSummary, DocumentType } from "../../types/dashboard";
+import RecentDocumentsSkeleton from "../skeletons/RecentDocumentsSkeleton";
 
 interface RecentDocumentsProps {
   quotations: QuotationSummary[];
@@ -43,7 +59,7 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesSearch =
-        doc.client.fullName.toLowerCase().includes(query) ||
+        (doc.client.fullName || doc.client.name || '').toLowerCase().includes(query) ||
         ("quotationNumber" in doc && doc.quotationNumber.toLowerCase().includes(query)) ||
         ("receiptNumber" in doc && doc.receiptNumber.toLowerCase().includes(query));
       if (!matchesSearch) return false;
@@ -61,26 +77,65 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
   const getStatusBadge = (doc: CombinedDocument) => {
     if (doc.docType === "quotation" && doc.validity?.status) {
       const statusColors: Record<"active" | "expired" | "converted", string> = {
-        active: "bg-green-100 text-green-800",
-        expired: "bg-red-100 text-red-800",
-        converted: "bg-blue-100 text-blue-800",
+        active: "bg-green-100 text-green-600",
+        expired: "bg-red-100 text-red-600",
+        converted: "bg-blue-100 text-blue-600",
       };
+
+      const getStatusIcon = (status: string) => {
+        switch (status) {
+          case "active":
+            return <CheckCircle size={14} />;
+          case "expired":
+            return <XCircle size={14} />;
+          case "converted":
+            return <AlertCircle size={14} />;
+          default:
+            return <Clock size={14} />;
+        }
+      };
+
       return (
-        <span className={clsx("px-2 py-1 text-xs font-medium rounded-full", statusColors[doc.validity.status])}>
-          {doc.validity.status}
+        <span className={clsx("inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full", statusColors[doc.validity.status])}>
+          {getStatusIcon(doc.validity.status)}
+          <span className="capitalize">{doc.validity.status}</span>
         </span>
       );
     }
 
     if (doc.docType === "receipt" && doc.payment?.status) {
-      const statusColors: Record<"paid" | "partial" | "pending", string> = {
-        paid: "bg-green-100 text-green-800",
-        partial: "bg-yellow-100 text-yellow-800",
-        pending: "bg-red-100 text-red-800",
+      const statusColors: Record<"paid" | "partial" | "pending" | "overdue" | "refunded" | "cancelled", string> = {
+        paid: "bg-green-100 text-green-600",
+        partial: "bg-yellow-100 text-yellow-600",
+        pending: "bg-gray-100 text-gray-600",
+        overdue: "bg-red-100 text-red-600",
+        refunded: "bg-blue-100 text-blue-600",
+        cancelled: "bg-gray-200 text-gray-600",
       };
+
+      const getPaymentStatusIcon = (status: string) => {
+        switch (status) {
+          case "paid":
+            return <CheckCircle size={14} />;
+          case "partial":
+            return <AlertCircle size={14} />;
+          case "pending":
+            return <Clock size={14} />;
+          case "overdue":
+            return <AlertTriangle size={14} />;
+          case "refunded":
+            return <CreditCard size={14} />;
+          case "cancelled":
+            return <XCircle size={14} />;
+          default:
+            return <Clock size={14} />;
+        }
+      };
+
       return (
-        <span className={clsx("px-2 py-1 text-xs font-medium rounded-full", statusColors[doc.payment.status])}>
-          {doc.payment.status}
+        <span className={clsx("inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full", statusColors[doc.payment.status])}>
+          {getPaymentStatusIcon(doc.payment.status)}
+          <span className="capitalize">{doc.payment.status}</span>
         </span>
       );
     }
@@ -106,18 +161,7 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
   };
 
   if (loading) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-48"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-32 bg-gray-100 rounded-lg"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <RecentDocumentsSkeleton />;
   }
 
   return (
@@ -224,7 +268,9 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-500 uppercase tracking-wide">Client</span>
-                          <span className="text-sm font-medium text-gray-700 text-right">{doc.client.fullName}</span>
+                          <span className="text-sm font-medium text-gray-700 text-right">
+                            {doc.client.fullName || doc.client.name}
+                          </span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-500 uppercase tracking-wide">Created By</span>
@@ -330,7 +376,7 @@ const RecentDocuments: React.FC<RecentDocumentsProps> = ({
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{doc.client.fullName}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{doc.client.fullName || doc.client.name}</td>
                         <td className="py-3 px-4 text-sm font-medium text-gray-900">
                           {doc.docType === "quotation" && doc.pricing
                             ? formatAmount(doc.pricing.totalAmount, doc.pricing.currency)

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { BarChart3, Users, FileText, TrendingUp, Calendar } from "lucide-react";
 import { adminAPI, type UserPerformance, type DashboardStats } from "../../../services/admin";
+import { ReportsTabSkeleton } from "../../../components/skeletons";
 // import type { NotificationStatsResponse } from "../../../types/notification";
 
 const ReportsTab: React.FC = () => {
@@ -73,12 +74,7 @@ const ReportsTab: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-aces-green"></div>
-        <span className="ml-2 text-gray-600">Loading reports...</span>
-      </div>
-    );
+    return <ReportsTabSkeleton />;
   }
 
   return (

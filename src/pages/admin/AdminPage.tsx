@@ -5,7 +5,6 @@ import { PageLayout } from "../../components/layout";
 import { useAuth } from "../../context/useAuth";
 import { useNavigate } from "react-router-dom";
 import UserManagement from "./components/UserManagement";
-
 import ReportsTab from "./components/ReportsTab";
 
 type TabType = "users" | "settings" | "reports" | "audit";
@@ -57,7 +56,6 @@ const AdminPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
         >
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">

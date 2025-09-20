@@ -49,7 +49,8 @@ export interface QuotationSummary {
   quotationNumber: string;
   type: "Residential" | "International" | "Office";
   client: {
-    fullName: string;
+    fullName?: string;
+    name?: string;
     email?: string;
     phone?: string;
   };
@@ -72,7 +73,8 @@ export interface ReceiptSummary {
   _id: string;
   receiptNumber: string;
   client: {
-    fullName: string;
+    fullName?: string;
+    name?: string;
     email?: string;
     phone?: string;
   };

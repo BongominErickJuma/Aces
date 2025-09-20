@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { clsx } from "clsx";
+import StatsCardSkeleton from "../skeletons/StatsCardSkeleton";
 
 interface StatsCardProps {
   title: string;
@@ -53,16 +54,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
   };
 
   if (loading) {
-    return (
-      <div className={clsx("rounded-xl p-6 border-2 animate-pulse", colorClasses[color])}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="h-4 bg-gray-200 rounded w-24"></div>
-          <div className="h-10 w-10 bg-gray-200 rounded-lg"></div>
-        </div>
-        <div className="h-8 bg-gray-200 rounded w-32 mb-2"></div>
-        <div className="h-4 bg-gray-200 rounded w-16"></div>
-      </div>
-    );
+    return <StatsCardSkeleton color={color} />;
   }
 
   return (

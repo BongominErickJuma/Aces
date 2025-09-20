@@ -19,10 +19,15 @@ import {
   Loader2,
   Settings,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { receiptsAPI, type Receipt, type ReceiptFilters } from "../../../services/receipts";
 import { Button } from "../../../components/ui/Button";
 import { useAuth } from "../../../context/useAuth";
+import ReceiptsSkeleton from "../../../components/skeletons/ReceiptsSkeleton";
 
 const ReceiptsList: React.FC = () => {
   const navigate = useNavigate();
@@ -34,13 +39,13 @@ const ReceiptsList: React.FC = () => {
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<ReceiptFilters>({
     page: 1,
-    limit: 20,
+    limit: 10,
     sortBy: "createdAt",
     sortOrder: "desc",
   });
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 20,
+    limit: 10,
     total: 0,
     totalPages: 0,
   });
@@ -56,6 +61,7 @@ const ReceiptsList: React.FC = () => {
     isOpen: boolean;
     count: number;
   }>({ isOpen: false, count: 0 });
+
   const [bulkDownloading, setBulkDownloading] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
@@ -397,15 +403,7 @@ const ReceiptsList: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-4 border-aces-green border-t-transparent rounded-full"
-        />
-      </div>
-    );
+    return <ReceiptsSkeleton />;
   }
 
   if (error) {
@@ -1147,43 +1145,96 @@ const ReceiptsList: React.FC = () => {
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            Page {pagination.page} of {pagination.totalPages}
-          </p>
-          <div className="flex items-center space-x-2">
-            <Button
+        <>
+          {/* Desktop pagination (for table view) */}
+          <div className="hidden 2xl:flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Page {pagination.page} of {pagination.totalPages}
+            </p>
+            <div className="flex items-center space-x-2">
+              <Button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page === 1}
+                variant="secondary"
+                size="sm"
+              >
+                Previous
+              </Button>
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                const page = i + Math.max(1, pagination.page - 2);
+                if (page > pagination.totalPages) return null;
+                return (
+                  <Button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    variant={page === pagination.page ? "primary" : "secondary"}
+                    size="sm"
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
+              <Button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page === pagination.totalPages}
+                variant="secondary"
+                size="sm"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile/Tablet pagination (for card view) */}
+          <div className="flex 2xl:hidden items-center justify-center gap-2">
+            {/* First page */}
+            <button
+              onClick={() => handlePageChange(1)}
+              disabled={pagination.page === 1}
+              className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="First page"
+            >
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+
+            {/* Previous page */}
+            <button
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={pagination.page === 1}
-              variant="secondary"
-              size="sm"
+              className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Previous page"
             >
-              Previous
-            </Button>
-            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-              const page = i + Math.max(1, pagination.page - 2);
-              if (page > pagination.totalPages) return null;
-              return (
-                <Button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  variant={page === pagination.page ? "primary" : "secondary"}
-                  size="sm"
-                >
-                  {page}
-                </Button>
-              );
-            })}
-            <Button
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Page indicator */}
+            <div className="px-4 py-2 bg-gray-100 rounded-lg min-w-[80px] text-center">
+              <span className="text-sm font-medium text-gray-900">
+                {pagination.page}/{pagination.totalPages}
+              </span>
+            </div>
+
+            {/* Next page */}
+            <button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={pagination.page === pagination.totalPages}
-              variant="secondary"
-              size="sm"
+              className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Next page"
             >
-              Next
-            </Button>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            {/* Last page */}
+            <button
+              onClick={() => handlePageChange(pagination.totalPages)}
+              disabled={pagination.page === pagination.totalPages}
+              className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Last page"
+            >
+              <ChevronsRight className="w-4 h-4" />
+            </button>
           </div>
-        </div>
+        </>
       )}
 
       {/* Delete Confirmation Modal */}

@@ -133,7 +133,6 @@ const CreatePage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 lg:p-6"
         >
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-2 lg:space-x-8" aria-label="Tabs">
