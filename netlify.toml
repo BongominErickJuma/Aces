@@ -1,0 +1,33 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Production environment variables
+[context.production.environment]
+  VITE_API_URL = "https://aces-mover-server.onrender.com/api"
+  VITE_APP_NAME = "Aces Movers"
+  VITE_APP_VERSION = "1.0.0"
+
+# Branch deploys (for testing)
+[context.branch-deploy.environment]
+  VITE_API_URL = "https://aces-mover-server.onrender.com/api"
+  VITE_APP_NAME = "Aces Movers (Preview)"
+  VITE_APP_VERSION = "1.0.0"
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# SPA redirect rules
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
