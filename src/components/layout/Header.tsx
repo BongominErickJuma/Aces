@@ -1,20 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  LayoutDashboard,
-  FileText,
-  Receipt,
-  Plus,
-  Shield,
-  Bell,
-  LogOut,
-  Menu,
-  X,
-} from "lucide-react";
+import { LayoutDashboard, FileText, Receipt, Plus, Shield, Bell, LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { notificationAPI } from "../../services/notifications";
-import type { PendingReviewResponse, UnreadCountResponse } from "../../types/notification";
+import type { UnreadCountResponse } from "../../types/notification";
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -22,7 +12,6 @@ const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [pendingReviewCount, setPendingReviewCount] = useState(0);
 
   // Load notification count
   const loadNotificationData = useCallback(async () => {
@@ -35,20 +24,20 @@ const Header: React.FC = () => {
 
       // Load admin data if user is admin
       if (user.role === "admin") {
-        const pendingResponse: PendingReviewResponse = await notificationAPI.getPendingReview();
-        setPendingReviewCount(pendingResponse.data.count || 0);
+        // Admin-specific notification handling can be added here if needed
+        // const pendingResponse: PendingReviewResponse = await notificationAPI.getPendingReview();
       }
     } catch (error) {
       console.error("Failed to load notifications:", error);
     }
-  }, [user?.role]);
+  }, [user]);
 
   // Load notification data on component mount and when user changes
   useEffect(() => {
     if (user) {
       loadNotificationData();
     }
-  }, [user?.id, loadNotificationData]);
+  }, [user, loadNotificationData]);
 
   const handleLogout = async () => {
     try {
@@ -58,7 +47,6 @@ const Header: React.FC = () => {
       console.error("Logout error:", error);
     }
   };
-
 
   const navigationItems = [
     {
