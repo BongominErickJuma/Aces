@@ -113,7 +113,7 @@ const ReceiptsList: React.FC = () => {
       // Set new timer for debounced search
       const newTimer = setTimeout(() => {
         setFilters((prev) => ({ ...prev, search: value, page: 1 }));
-      }, 300); // 300ms debounce
+      }, 800); // 800ms debounce
 
       setSearchDebounceTimer(newTimer);
     },
@@ -352,11 +352,22 @@ const ReceiptsList: React.FC = () => {
   };
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat("en-UG", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-    }).format(amount);
+    if (currency === 'UGX') {
+      // Custom formatting for UGX to show "UGX XXXXX" format
+      const number = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount);
+      return `UGX ${number}`;
+    } else {
+      // Use standard formatting for other currencies
+      const formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: currency === 'USD' ? 2 : 0
+      });
+      return formatter.format(amount);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -422,14 +433,14 @@ const ReceiptsList: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+      <div>
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
-          <div className="flex-1 relative">
+          <div className="relative" style={{ width: "350px" }}>
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Search receipts by number or client name..."
+              placeholder="Search by number and name"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
@@ -501,7 +512,7 @@ const ReceiptsList: React.FC = () => {
               exit={{ opacity: 0, height: 0 }}
               className="mt-4 pt-4 border-t border-gray-200"
             >
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <select
                   value={filters.receiptType || ""}
                   onChange={(e) => handleFilterChange("receiptType", e.target.value || undefined)}
@@ -524,19 +535,7 @@ const ReceiptsList: React.FC = () => {
                   <option value="partial">Partial</option>
                   <option value="paid">Paid</option>
                   <option value="overdue">Overdue</option>
-                  <option value="refunded">Refunded</option>
-                  <option value="cancelled">Cancelled</option>
                 </select>
-
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={filters.overdue || false}
-                    onChange={(e) => handleFilterChange("overdue", e.target.checked || undefined)}
-                    className="rounded border-gray-300 text-aces-green focus:ring-aces-green"
-                  />
-                  <span className="text-sm text-gray-700">Show only overdue</span>
-                </label>
 
                 <select
                   value={`${filters.sortBy}-${filters.sortOrder}`}

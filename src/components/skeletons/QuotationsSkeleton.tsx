@@ -4,20 +4,20 @@ const QuotationsSkeleton: React.FC = () => {
   return (
     <div className="space-y-6 animate-pulse">
       {/* Search and Filters Header */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+      <div>
         <div className="flex flex-col lg:flex-row gap-4">
-          {/* Search bar */}
-          <div className="flex-1 relative">
+          {/* Search bar - 350px width */}
+          <div className="relative" style={{ width: '350px' }}>
             <div className="h-12 bg-gray-200 rounded-lg"></div>
           </div>
 
           {/* Column Settings (desktop only) */}
           <div className="relative hidden 2xl:block">
-            <div className="h-12 w-20 bg-gray-200 rounded-lg"></div>
+            <div className="h-12 w-24 bg-gray-200 rounded-lg"></div>
           </div>
 
           {/* Filter Toggle */}
-          <div className="h-12 w-20 bg-gray-200 rounded-lg"></div>
+          <div className="h-12 w-24 bg-gray-200 rounded-lg"></div>
         </div>
       </div>
 

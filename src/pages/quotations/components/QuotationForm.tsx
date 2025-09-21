@@ -237,18 +237,18 @@ const QuotationForm: React.FC<QuotationFormProps> = ({ quotation, onSave, onCanc
               {
                 type: "Residential",
                 description: "Moving homes, apartments, and personal belongings",
-                features: ["Packaging", "Transportation", "Labor"]
+                features: ["Packaging", "Transportation", "Labor"],
               },
               {
                 type: "International",
                 description: "Cross-border moves with customs clearance",
-                features: ["Border Clearance", "Documentation", "International Transport"]
+                features: ["Border Clearance", "Documentation", "International Transport"],
               },
               {
                 type: "Office",
                 description: "Business relocations and office equipment moves",
-                features: ["Equipment Handling", "Minimal Downtime", "Professional Service"]
-              }
+                features: ["Equipment Handling", "Minimal Downtime", "Professional Service"],
+              },
             ].map((moveType) => (
               <label key={moveType.type} className="cursor-pointer">
                 <input

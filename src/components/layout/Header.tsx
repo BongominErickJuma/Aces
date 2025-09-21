@@ -149,8 +149,8 @@ const Header: React.FC = () => {
               >
                 <Bell size={16} className="xl:w-[18px] xl:h-[18px]" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center font-medium">
-                    {unreadCount > 99 ? "99+" : unreadCount}
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs text-white flex items-center justify-center font-medium">
+                    {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
               </button>

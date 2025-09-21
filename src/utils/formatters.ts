@@ -7,9 +7,20 @@ export const formatDate = (date: string | Date): string => {
 };
 
 export const formatCurrency = (amount: number, currency: string = 'UGX'): string => {
-  return new Intl.NumberFormat('en-UG', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: currency === 'UGX' ? 0 : 2
-  }).format(amount);
+  if (currency === 'UGX') {
+    // Custom formatting for UGX to show "UGX XXXXX" format
+    const number = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+    return `UGX ${number}`;
+  } else {
+    // Use standard formatting for other currencies
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: currency === 'USD' ? 2 : 0
+    });
+    return formatter.format(amount);
+  }
 };

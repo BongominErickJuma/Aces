@@ -73,6 +73,7 @@ export interface Receipt {
   _id: string;
   receiptNumber: string;
   receiptType: "box" | "commitment" | "final" | "one_time";
+  moveType?: "international" | "residential" | "office";
   quotationId?: {
     _id: string;
     quotationNumber: string;
@@ -105,6 +106,7 @@ export interface Receipt {
 
 export interface CreateReceiptData {
   receiptType: "box" | "commitment" | "final" | "one_time";
+  moveType?: "international" | "residential" | "office";
   quotationId?: string;
   client: ReceiptClient;
   locations?: ReceiptLocations;

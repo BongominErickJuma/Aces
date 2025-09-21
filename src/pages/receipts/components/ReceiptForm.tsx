@@ -42,6 +42,7 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
   } = useForm<FormData>({
     defaultValues: {
       receiptType: "box",
+      moveType: "residential",
       client: {
         name: "",
         phone: "",
@@ -93,6 +94,7 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
     if (isEditing && receipt) {
       reset({
         receiptType: receipt.receiptType,
+        moveType: receipt.moveType || "residential",
         quotationId: receipt.quotationId?._id,
         client: receipt.client,
         locations: receipt.locations
@@ -307,6 +309,49 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
           {errors.receiptType && <p className="text-red-600 text-sm mt-2">{errors.receiptType.message}</p>}
         </motion.div>
 
+        {/* Move Type - Only for non-box receipts */}
+        {receiptType !== "box" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Move Type</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { value: "residential", label: "Residential Move", description: "Moving homes and apartments" },
+                { value: "office", label: "Office Move", description: "Commercial and office relocations" },
+                { value: "international", label: "International Move", description: "Cross-border relocations" },
+              ].map((type) => (
+                <label key={type.value} className="cursor-pointer">
+                  <input
+                    type="radio"
+                    value={type.value}
+                    {...register("moveType", {
+                      required: "Move type is required for this receipt type",
+                    })}
+                    className="sr-only"
+                  />
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      watch("moveType") === type.value
+                        ? "border-aces-green bg-green-50 text-aces-green"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="font-medium mb-1">{type.label}</div>
+                    <p className="text-xs text-gray-600">{type.description}</p>
+                  </motion.div>
+                </label>
+              ))}
+            </div>
+            {errors.moveType && <p className="text-red-600 text-sm mt-2">{errors.moveType.message}</p>}
+          </motion.div>
+        )}
+
         {/* Client Information */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -342,22 +387,6 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
                 placeholder="+256 700 123 456"
               />
               {errors.client?.phone && <p className="text-red-600 text-sm mt-1">{errors.client.phone.message}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-              <input
-                type="email"
-                {...register("client.email", {
-                  pattern: {
-                    value: /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-                    message: "Please enter a valid email address",
-                  },
-                })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
-                placeholder="client@example.com"
-              />
-              {errors.client?.email && <p className="text-red-600 text-sm mt-1">{errors.client.email.message}</p>}
             </div>
 
             <div>

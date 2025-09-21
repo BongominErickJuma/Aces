@@ -14,6 +14,13 @@ export interface User {
     publicId?: string;
     uploadedAt?: string;
   };
+  signature?: {
+    type?: 'canvas' | 'upload';
+    data?: string;
+    publicId?: string;
+    originalName?: string;
+    createdAt?: string;
+  };
   profileCompleted: boolean;
   profileCompletionStatus?: {
     isComplete: boolean;

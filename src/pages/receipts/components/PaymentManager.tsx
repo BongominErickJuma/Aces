@@ -21,11 +21,22 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
   });
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat("en-UG", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-    }).format(amount);
+    if (currency === 'UGX') {
+      // Custom formatting for UGX to show "UGX XXXXX" format
+      const number = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount);
+      return `UGX ${number}`;
+    } else {
+      // Use standard formatting for other currencies
+      const formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: currency === 'USD' ? 2 : 0
+      });
+      return formatter.format(amount);
+    }
   };
 
   const formatDate = (dateString: string) => {

@@ -140,7 +140,7 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
       // Set new timer for debounced search
       const newTimer = setTimeout(() => {
         setFilters((prev) => ({ ...prev, search: value, page: 1 }));
-      }, 300); // 300ms debounce
+      }, 800); // 800ms debounce
 
       setSearchDebounceTimer(newTimer);
     },
@@ -396,11 +396,22 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
   };
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat("en-UG", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-    }).format(amount);
+    if (currency === 'UGX') {
+      // Custom formatting for UGX to show "UGX XXXXX" format
+      const number = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount);
+      return `UGX ${number}`;
+    } else {
+      // Use standard formatting for other currencies
+      const formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: currency === 'USD' ? 2 : 0
+      });
+      return formatter.format(amount);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -466,14 +477,14 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
   return (
     <div className="space-y-6">
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+      <div>
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
-          <div className="flex-1 relative">
+          <div className="relative" style={{ width: "350px" }}>
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Search quotations by number, client name, or company..."
+              placeholder="Search by number and name"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
@@ -565,7 +576,6 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
                   <option value="">All Statuses</option>
                   <option value="active">Active</option>
                   <option value="expired">Expired</option>
-                  <option value="converted">Converted</option>
                 </select>
 
                 <select

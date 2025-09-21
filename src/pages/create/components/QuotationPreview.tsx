@@ -46,11 +46,23 @@ interface QuotationPreviewProps {
 
 const QuotationPreview: React.FC<QuotationPreviewProps> = ({ data }) => {
   const formatCurrencyDisplay = (amount: number) => {
-    return new Intl.NumberFormat("en-UG", {
-      style: "currency",
-      currency: data.pricing.currency || "UGX",
-      minimumFractionDigits: 0,
-    }).format(amount).replace(/^UGX\s*/, 'UGX ');
+    const currency = data.pricing.currency || "UGX";
+    if (currency === 'UGX') {
+      // Custom formatting for UGX to show "UGX XXXXX" format
+      const number = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount);
+      return `UGX ${number}`;
+    } else {
+      // Use standard formatting for other currencies
+      const formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: currency === 'USD' ? 2 : 0
+      });
+      return formatter.format(amount);
+    }
   };
 
   const getQuotationNumber = () => {
