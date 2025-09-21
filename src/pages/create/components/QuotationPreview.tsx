@@ -1,5 +1,4 @@
 import React from "react";
-import { formatDate, formatCurrency } from "../../../utils/formatters";
 
 interface Service {
   name: string;
@@ -47,19 +46,19 @@ interface QuotationPreviewProps {
 const QuotationPreview: React.FC<QuotationPreviewProps> = ({ data }) => {
   const formatCurrencyDisplay = (amount: number) => {
     const currency = data.pricing.currency || "UGX";
-    if (currency === 'UGX') {
+    if (currency === "UGX") {
       // Custom formatting for UGX to show "UGX XXXXX" format
-      const number = new Intl.NumberFormat('en-US', {
+      const number = new Intl.NumberFormat("en-US", {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0
+        maximumFractionDigits: 0,
       }).format(amount);
       return `UGX ${number}`;
     } else {
       // Use standard formatting for other currencies
-      const formatter = new Intl.NumberFormat('en-US', {
-        style: 'currency',
+      const formatter = new Intl.NumberFormat("en-US", {
+        style: "currency",
         currency: currency,
-        minimumFractionDigits: currency === 'USD' ? 2 : 0
+        minimumFractionDigits: currency === "USD" ? 2 : 0,
       });
       return formatter.format(amount);
     }
@@ -70,19 +69,19 @@ const QuotationPreview: React.FC<QuotationPreviewProps> = ({ data }) => {
   };
 
   const getCurrentDate = () => {
-    return new Date().toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    return new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
   const getMovingDate = () => {
     if (!data.locations?.movingDate) return "";
-    return new Date(data.locations.movingDate).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    return new Date(data.locations.movingDate).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
@@ -90,21 +89,14 @@ const QuotationPreview: React.FC<QuotationPreviewProps> = ({ data }) => {
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
-
         {/* Header Top Section */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <div className="mb-2">
               <div className="mb-1">
-                <img
-                  src="/vite.svg"
-                  alt="Aces Movers Logo"
-                  className="h-8 w-auto"
-                />
+                <img src="/vite.svg" alt="Aces Movers Logo" className="h-8 w-auto" />
               </div>
-              <div className="text-xs text-green-600 font-medium">
-                Aces Movers and Relocation Company Limited
-              </div>
+              <div className="text-xs text-green-600 font-medium">Aces Movers and Relocation Company Limited</div>
             </div>
           </div>
           <div className="text-right">
@@ -141,9 +133,7 @@ const QuotationPreview: React.FC<QuotationPreviewProps> = ({ data }) => {
 
       {/* Client Info Section */}
       <div className="p-6 border-b border-gray-200">
-        <div className="text-sm font-medium text-gray-900 mb-3 pb-1 border-b border-gray-200">
-          Client's Info
-        </div>
+        <div className="text-sm font-medium text-gray-900 mb-3 pb-1 border-b border-gray-200">Client's Info</div>
         <div className="space-y-2 text-xs text-gray-700">
           {data.client.company && (
             <div className="flex">
@@ -153,23 +143,23 @@ const QuotationPreview: React.FC<QuotationPreviewProps> = ({ data }) => {
           )}
           <div className="flex">
             <span className="w-24 text-gray-600">Contact Person:</span>
-            <span>{data.client.name || 'Not specified'}</span>
+            <span>{data.client.name || "Not specified"}</span>
           </div>
           <div className="flex">
             <span className="w-24 text-gray-600">Contact:</span>
-            <span>{data.client.phone || 'Not specified'}</span>
+            <span>{data.client.phone || "Not specified"}</span>
           </div>
           <div className="flex">
             <span className="w-24 text-gray-600">Email:</span>
-            <span>{data.client.email || 'Not specified'}</span>
+            <span>{data.client.email || "Not specified"}</span>
           </div>
           <div className="flex">
             <span className="w-24 text-gray-600">From:</span>
-            <span>{data.locations.from || 'Not specified'}</span>
+            <span>{data.locations.from || "Not specified"}</span>
           </div>
           <div className="flex">
             <span className="w-24 text-gray-600">To:</span>
-            <span>{data.locations.to || 'Not specified'}</span>
+            <span>{data.locations.to || "Not specified"}</span>
           </div>
           {getMovingDate() && (
             <div className="flex">
@@ -197,8 +187,8 @@ const QuotationPreview: React.FC<QuotationPreviewProps> = ({ data }) => {
               return (
                 <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                   <td className="px-3 py-3 text-center">{index + 1}</td>
-                  <td className="px-3 py-3">{service.name || 'Service name'}</td>
-                  <td className="px-3 py-3 text-gray-600">{service.description || 'Service description'}</td>
+                  <td className="px-3 py-3">{service.name || "Service name"}</td>
+                  <td className="px-3 py-3 text-gray-600">{service.description || "Service description"}</td>
                   <td className="px-3 py-3 text-right">{formatCurrencyDisplay(total)}</td>
                 </tr>
               );
@@ -222,11 +212,21 @@ const QuotationPreview: React.FC<QuotationPreviewProps> = ({ data }) => {
           <div className="flex-1">
             <div className="text-sm font-medium text-green-600 mb-3">Bank Details</div>
             <div className="space-y-1 text-xs">
-              <div><span className="text-gray-600">Account Number:</span> 1044102306223</div>
-              <div><span className="text-gray-600">Account Name:</span> KAMOGA GEOFREY</div>
-              <div><span className="text-gray-600">Bank Name:</span> EQUITY BANK - NTINDA</div>
-              <div><span className="text-gray-600">Swift Code:</span> EQBLUGKA</div>
-              <div><span className="text-gray-600">Sort Code:</span> 100137</div>
+              <div>
+                <span className="text-gray-600">Account Number:</span> 1044102306223
+              </div>
+              <div>
+                <span className="text-gray-600">Account Name:</span> KAMOGA GEOFREY
+              </div>
+              <div>
+                <span className="text-gray-600">Bank Name:</span> EQUITY BANK - NTINDA
+              </div>
+              <div>
+                <span className="text-gray-600">Swift Code:</span> EQBLUGKA
+              </div>
+              <div>
+                <span className="text-gray-600">Sort Code:</span> 100137
+              </div>
             </div>
           </div>
           <div className="flex-1">
