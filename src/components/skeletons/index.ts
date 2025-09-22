@@ -1,6 +1,10 @@
 export { default as AdminTabNavigationSkeleton } from './AdminTabNavigationSkeleton';
 export { default as QuotationsSkeleton } from './QuotationsSkeleton';
+export { default as QuotationDetailsSkeleton } from './QuotationDetailsSkeleton';
+export { default as QuotationEditSkeleton } from './QuotationEditSkeleton';
 export { default as ReceiptsSkeleton } from './ReceiptsSkeleton';
+export { default as ReceiptDetailsSkeleton } from './ReceiptDetailsSkeleton';
+export { default as ReceiptEditSkeleton } from './ReceiptEditSkeleton';
 export { default as RecentDocumentsSkeleton } from './RecentDocumentsSkeleton';
 export { default as ReportsTabSkeleton } from './ReportsTabSkeleton';
 export { default as StatsCardSkeleton } from './StatsCardSkeleton';

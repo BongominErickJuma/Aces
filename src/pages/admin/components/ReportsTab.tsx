@@ -303,24 +303,24 @@ const ReportsTab: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+        className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6"
       >
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Performers</h3>
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {getTopPerformers().map((user, index) => (
-            <div key={user.user._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center">
+            <div key={user.user._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center flex-1 min-w-0">
                 <div className="flex-shrink-0">
-                  <div className="h-10 w-10 bg-aces-green rounded-full flex items-center justify-center text-white font-semibold">
+                  <div className="h-8 w-8 sm:h-10 sm:w-10 bg-aces-green rounded-full flex items-center justify-center text-white font-semibold text-sm sm:text-base">
                     {index + 1}
                   </div>
                 </div>
-                <div className="ml-3">
-                  <div className="text-sm font-medium text-gray-900">{user.user.fullName}</div>
-                  <div className="text-xs text-gray-500">{user.user.email}</div>
+                <div className="ml-3 min-w-0 flex-1">
+                  <div className="text-sm font-medium text-gray-900 truncate">{user.user.fullName}</div>
+                  <div className="text-xs text-gray-500 truncate">{user.user.email}</div>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-left sm:text-right flex-shrink-0">
                 <div className="text-sm font-medium text-gray-900">
                   {user.quotationCount + user.receiptCount} documents
                 </div>

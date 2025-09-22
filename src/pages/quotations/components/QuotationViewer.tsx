@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { PageLayout } from "../../../components/layout";
+import { QuotationDetailsSkeleton } from "../../../components/skeletons";
 
 interface QuotationData {
   _id: string;
@@ -181,13 +182,8 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
 
   if (loading) {
     return (
-      <PageLayout title="Loading Quotation">
-        <div className="flex items-center justify-center h-64">
-          <div className="flex items-center gap-3">
-            <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-            <p className="text-gray-600">Loading quotation...</p>
-          </div>
-        </div>
+      <PageLayout title="Quotation Details">
+        <QuotationDetailsSkeleton />
       </PageLayout>
     );
   }
@@ -236,12 +232,12 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
     <PageLayout title={`Quotation ${quotation.quotationNumber}`}>
       <div className="mx-auto">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <FileText className="w-6 h-6 text-blue-600" />
+              <FileText className="w-6 h-6 text-blue-600 hidden sm:block" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Quotation Details</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 hidden sm:block">Quotation Details</h1>
               </div>
             </div>
           </div>
@@ -252,7 +248,7 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
               onClick={handleDownload}
               disabled={downloading}
               className={clsx(
-                "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors",
+                "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors w-full sm:w-auto justify-center",
                 downloading
                   ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
                   : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -281,8 +277,8 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
         >
           {/* Status and Metadata */}
           <div className="p-6 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
                 {quotation.validity?.status && getStatusBadge(quotation.validity.status)}
                 <div className="flex items-center gap-2">
                   {getMoveTypeIcon(quotation.type)}
@@ -296,8 +292,8 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
                   </span>
                 )}
               </div>
-              <div className="text-right text-sm text-gray-600">
-                <div className="flex items-center gap-1 mb-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 text-sm text-gray-600 lg:text-right">
+                <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   Created: {formatDate(quotation.createdAt)}
                 </div>
@@ -306,13 +302,13 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
                   By: {quotation.createdBy.fullName}
                 </div>
                 {quotation.validity?.validUntil && (
-                  <div className="flex items-center gap-1 mt-1">
+                  <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
                     Expires: {formatDate(quotation.validity.validUntil)}
                   </div>
                 )}
                 {quotation.validity?.daysValid && (
-                  <div className="flex items-center gap-1 mt-1 text-xs">
+                  <div className="flex items-center gap-1 text-xs">
                     Valid for {quotation.validity.daysValid} days
                   </div>
                 )}

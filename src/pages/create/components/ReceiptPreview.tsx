@@ -45,6 +45,32 @@ interface ReceiptPreviewProps {
 }
 
 const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ data }) => {
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      {/* Mobile responsive wrapper */}
+      <div className="lg:hidden">
+        <div className="p-3 bg-gray-50 border-b border-gray-200 text-center">
+          <p className="text-xs text-gray-600">Receipt Preview</p>
+          <p className="text-xs text-gray-500">Tap and scroll to view full document</p>
+        </div>
+        <div className="overflow-x-auto overflow-y-auto max-h-96">
+          <div className="min-w-[600px] transform scale-75 origin-top-left">
+            <ReceiptPreviewContent data={data} />
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop view */}
+      <div className="hidden lg:block">
+        <ReceiptPreviewContent data={data} />
+      </div>
+    </div>
+  );
+};
+
+// Extracted preview content component
+const ReceiptPreviewContent: React.FC<ReceiptPreviewProps> = ({ data }) => {
   const { user } = useAuth();
 
   const formatCurrencyDisplay = (amount: number) => {

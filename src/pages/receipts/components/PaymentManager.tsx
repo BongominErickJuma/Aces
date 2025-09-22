@@ -134,17 +134,17 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
   const paymentProgress = (receipt.payment.amountPaid / receipt.payment.totalAmount) * 100;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center space-x-3">
           <DollarSign className="text-aces-green" size={24} />
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Payment Management</h3>
-            <p className="text-sm text-gray-600">Track and manage receipt payments</p>
+            <p className="text-sm text-gray-600 hidden sm:block">Track and manage receipt payments</p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-between sm:justify-end space-x-3">
           <span
             className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-medium ${getPaymentStatusColor(
               receipt.payment.status
@@ -155,7 +155,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
           </span>
 
           {receipt.payment.status !== "paid" && (
-            <Button onClick={() => setShowAddPayment(!showAddPayment)} variant="primary" size="sm">
+            <Button onClick={() => setShowAddPayment(!showAddPayment)} variant="primary" size="sm" className="whitespace-nowrap">
               Add Payment
             </Button>
           )}
@@ -163,24 +163,24 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
       </div>
 
       {/* Payment Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6">
         <div className="bg-gray-50 rounded-lg p-4">
           <div className="text-sm text-gray-600 mb-1">Total Amount</div>
-          <div className="text-xl font-bold text-gray-900">
+          <div className="text-lg sm:text-xl font-bold text-gray-900">
             {formatCurrency(receipt.payment.totalAmount, receipt.payment.currency)}
           </div>
         </div>
 
         <div className="bg-green-50 rounded-lg p-4">
           <div className="text-sm text-gray-600 mb-1">Amount Paid</div>
-          <div className="text-xl font-bold text-green-600">
+          <div className="text-lg sm:text-xl font-bold text-green-600">
             {formatCurrency(receipt.payment.amountPaid, receipt.payment.currency)}
           </div>
         </div>
 
         <div className={`rounded-lg p-4 ${remainingBalance > 0 ? "bg-red-50" : "bg-green-50"}`}>
           <div className="text-sm text-gray-600 mb-1">Balance</div>
-          <div className={`text-xl font-bold ${remainingBalance > 0 ? "text-red-600" : "text-green-600"}`}>
+          <div className={`text-lg sm:text-xl font-bold ${remainingBalance > 0 ? "text-red-600" : "text-green-600"}`}>
             {formatCurrency(remainingBalance, receipt.payment.currency)}
           </div>
         </div>
@@ -217,7 +217,7 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Payment Amount *</label>
               <input
@@ -246,17 +246,18 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
             </div>
           </div>
 
-          <div className="flex items-center justify-end space-x-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:space-x-3">
             <Button
               onClick={() => {
                 setShowAddPayment(false);
                 setError(null);
               }}
               variant="secondary"
+              className="order-2 sm:order-1"
             >
               Cancel
             </Button>
-            <Button onClick={handleAddPayment} variant="primary" disabled={loading || paymentData.amount <= 0}>
+            <Button onClick={handleAddPayment} variant="primary" disabled={loading || paymentData.amount <= 0} className="order-1 sm:order-2">
               {loading ? "Adding..." : "Add Payment"}
             </Button>
           </div>
@@ -276,20 +277,20 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
                 transition={{ delay: index * 0.1 }}
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
               >
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
                   {getPaymentMethodIcon(payment.method)}
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <div className="font-medium text-gray-900">
                       {formatCurrency(payment.amount, receipt.payment.currency)}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600 truncate">
                       {payment.method.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                       {payment.reference && ` • ${payment.reference}`}
                     </div>
                   </div>
                 </div>
 
-                <div className="text-right">
+                <div className="text-right flex-shrink-0">
                   <div className="text-sm text-gray-900">{formatDate(payment.date)}</div>
                   <div className="text-xs text-gray-600">by {payment.receivedBy.fullName}</div>
                 </div>

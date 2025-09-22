@@ -56,6 +56,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchDebounceTimer, setSearchDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
@@ -156,6 +158,35 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
       }
     },
     [searchQuery, roleFilter, statusFilter, currentUser]
+  );
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+      }
+    };
+  }, [searchDebounceTimer]);
+
+  // Handle debounced search
+  const handleSearch = useCallback(
+    (value: string) => {
+      setSearchTerm(value);
+
+      // Clear existing timer
+      if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+      }
+
+      // Set new timer for debounced search
+      const newTimer = setTimeout(() => {
+        setSearchQuery(value);
+      }, 1000); // 800ms debounce
+
+      setSearchDebounceTimer(newTimer);
+    },
+    [searchDebounceTimer]
   );
 
   // Fetch users when filters change (reset to page 1)
@@ -467,8 +498,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
             <input
               type="text"
               placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-aces-green"
             />
           </div>
@@ -533,15 +564,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
           className="bg-aces-green text-white rounded-lg p-4"
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-3">
-            <span className="font-medium">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span className="font-medium text-center sm:text-left">
               {selectedUsers.size} user{selectedUsers.size !== 1 ? "s" : ""} selected
             </span>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
               <button
                 onClick={handleBulkSuspend}
                 disabled={bulkSuspending || bulkReactivating}
-                className={`px-3 py-1 rounded text-sm transition-colors flex items-center space-x-1 ${
+                className={`px-3 py-2 sm:py-1 rounded text-sm transition-colors flex items-center justify-center space-x-1 ${
                   bulkSuspending || bulkReactivating ? "bg-red-400 cursor-not-allowed" : "bg-red-500 hover:bg-red-600"
                 }`}
               >
@@ -551,7 +582,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
               <button
                 onClick={handleBulkReactivate}
                 disabled={bulkSuspending || bulkReactivating}
-                className={`px-3 py-1 rounded text-sm transition-colors flex items-center space-x-1 ${
+                className={`px-3 py-2 sm:py-1 rounded text-sm transition-colors flex items-center justify-center space-x-1 ${
                   bulkSuspending || bulkReactivating
                     ? "bg-green-400 cursor-not-allowed"
                     : "bg-green-500 hover:bg-green-600"
@@ -563,7 +594,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
               <button
                 onClick={() => setSelectedUsers(new Set())}
                 disabled={bulkSuspending || bulkReactivating}
-                className={`px-3 py-1 rounded text-sm transition-colors ${
+                className={`px-3 py-2 sm:py-1 rounded text-sm transition-colors ${
                   bulkSuspending || bulkReactivating
                     ? "bg-white/10 cursor-not-allowed text-white/70"
                     : "bg-white/20 hover:bg-white/30"

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { PageLayout } from "../../components/layout";
 import { Button } from "../../components/ui/Button";
+import { QuotationEditSkeleton } from "../../components/skeletons";
 import { quotationsAPI, type Quotation, type QuotationService } from "../../services/quotations";
 
 const QuotationEditPage: React.FC = () => {
@@ -280,12 +281,7 @@ const QuotationEditPage: React.FC = () => {
   if (loading) {
     return (
       <PageLayout title="Edit Quotation">
-        <div className="flex items-center justify-center h-64">
-          <div className="flex items-center gap-3">
-            <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-            <p className="text-gray-600">Loading quotation...</p>
-          </div>
-        </div>
+        <QuotationEditSkeleton />
       </PageLayout>
     );
   }

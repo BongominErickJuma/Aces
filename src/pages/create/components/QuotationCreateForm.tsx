@@ -744,7 +744,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
         </div>
 
         {/* Preview Section */}
-        <div className="flex-1 lg:w-1/2 lg:sticky lg:top-6 lg:self-start">
+        <div className="w-full lg:w-1/2 lg:sticky lg:top-6 lg:self-start">
           <QuotationPreview data={watchedFormData} />
         </div>
       </div>

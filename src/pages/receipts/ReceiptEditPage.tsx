@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Trash2, Calendar, User, MapPin, FileText, AlertCircle, Loader2, Phone, Mail, Home } from "lucide-react";
 import { PageLayout } from "../../components/layout";
 import { Button } from "../../components/ui/Button";
+import { ReceiptEditSkeleton } from "../../components/skeletons";
 import { receiptsAPI, type Receipt, type ReceiptService } from "../../services/receipts";
 
 const ReceiptEditPage: React.FC = () => {
@@ -344,10 +345,25 @@ const ReceiptEditPage: React.FC = () => {
   if (loading) {
     return (
       <PageLayout title="Edit Receipt">
-        <div className="flex items-center justify-center h-64">
-          <div className="flex items-center gap-3">
-            <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-            <p className="text-gray-600">Loading receipt...</p>
+        <ReceiptEditSkeleton />
+      </PageLayout>
+    );
+  }
+
+  if (error && !receipt) {
+    return (
+      <PageLayout title="Edit Receipt">
+        <div className="text-center py-12">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Receipt</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={fetchReceipt} variant="primary">
+              Try Again
+            </Button>
+            <Button onClick={() => navigate("/receipts")} variant="secondary">
+              Back to Receipts
+            </Button>
           </div>
         </div>
       </PageLayout>

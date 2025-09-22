@@ -44,6 +44,32 @@ interface QuotationPreviewProps {
 }
 
 const QuotationPreview: React.FC<QuotationPreviewProps> = ({ data }) => {
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      {/* Mobile responsive wrapper */}
+      <div className="lg:hidden">
+        <div className="p-3 bg-gray-50 border-b border-gray-200 text-center">
+          <p className="text-xs text-gray-600">Quotation Preview</p>
+          <p className="text-xs text-gray-500">Tap and scroll to view full document</p>
+        </div>
+        <div className="overflow-x-auto overflow-y-auto max-h-96">
+          <div className="min-w-[600px] transform scale-75 origin-top-left">
+            <QuotationPreviewContent data={data} />
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop view */}
+      <div className="hidden lg:block">
+        <QuotationPreviewContent data={data} />
+      </div>
+    </div>
+  );
+};
+
+// Extracted preview content component
+const QuotationPreviewContent: React.FC<QuotationPreviewProps> = ({ data }) => {
   const formatCurrencyDisplay = (amount: number) => {
     const currency = data.pricing.currency || "UGX";
     if (currency === "UGX") {

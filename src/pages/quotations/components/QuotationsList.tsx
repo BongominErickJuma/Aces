@@ -480,7 +480,7 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
       <div>
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
-          <div className="relative" style={{ width: "350px" }}>
+          <div className="relative flex-1 lg:flex-none lg:w-80">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
@@ -608,15 +608,15 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
           className="bg-aces-green text-white rounded-lg p-4"
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-3">
-            <span className="font-medium">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span className="font-medium text-center sm:text-left">
               {selectedQuotations.size} quotation{selectedQuotations.size !== 1 ? "s" : ""} selected
             </span>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
               <button
                 onClick={handleBulkDownload}
                 disabled={bulkDownloading || bulkDeleting}
-                className={`px-3 py-1 rounded text-sm transition-colors flex items-center space-x-1 ${
+                className={`px-3 py-2 sm:py-1 rounded text-sm transition-colors flex items-center justify-center space-x-1 ${
                   bulkDownloading || bulkDeleting
                     ? "bg-white/10 cursor-not-allowed text-white/70"
                     : "bg-white/20 hover:bg-white/30"
@@ -629,7 +629,7 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
                 <button
                   onClick={handleBulkDelete}
                   disabled={bulkDownloading || bulkDeleting}
-                  className={`px-3 py-1 rounded text-sm transition-colors flex items-center space-x-1 ${
+                  className={`px-3 py-2 sm:py-1 rounded text-sm transition-colors flex items-center justify-center space-x-1 ${
                     bulkDownloading || bulkDeleting ? "bg-red-400 cursor-not-allowed" : "bg-red-500 hover:bg-red-600"
                   }`}
                 >
@@ -640,7 +640,7 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
               <button
                 onClick={() => setSelectedQuotations(new Set())}
                 disabled={bulkDownloading || bulkDeleting}
-                className={`px-3 py-1 rounded text-sm transition-colors ${
+                className={`px-3 py-2 sm:py-1 rounded text-sm transition-colors ${
                   bulkDownloading || bulkDeleting
                     ? "bg-white/10 cursor-not-allowed text-white/70"
                     : "bg-white/20 hover:bg-white/30"

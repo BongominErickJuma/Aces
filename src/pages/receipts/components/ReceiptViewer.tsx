@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Download, Receipt, Calendar, User, Mail, Phone, MapPin, AlertCircle, Loader2, DollarSign } from "lucide-react";
 import { clsx } from "clsx";
 import { PageLayout } from "../../../components/layout";
+import { ReceiptDetailsSkeleton } from "../../../components/skeletons";
 import PaymentManager from "./PaymentManager";
 import { receiptsAPI, type Receipt as ReceiptType } from "../../../services/receipts";
 
@@ -113,13 +114,8 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
 
   if (loading) {
     return (
-      <PageLayout title="Loading Receipt">
-        <div className="flex items-center justify-center h-64">
-          <div className="flex items-center gap-3">
-            <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-            <p className="text-gray-600">Loading receipt...</p>
-          </div>
-        </div>
+      <PageLayout title="Receipt Details">
+        <ReceiptDetailsSkeleton />
       </PageLayout>
     );
   }
@@ -127,16 +123,22 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
   if (error) {
     return (
       <PageLayout title="Error">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Receipt</h2>
-            <p className="text-gray-600 mb-4">{error}</p>
+        <div className="text-center py-12">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Receipt</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              onClick={() => navigate("/dashboard")}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+              onClick={fetchReceipt}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
             >
-              Back to Dashboard
+              Try Again
+            </button>
+            <button
+              onClick={() => navigate("/receipts")}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Back to Receipts
             </button>
           </div>
         </div>
@@ -168,12 +170,12 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
     <PageLayout title={`Receipt ${receipt.receiptNumber}`}>
       <div className="mx-auto">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <Receipt className="w-6 h-6 text-emerald-600" />
+              <Receipt className="w-6 h-6 text-emerald-600 hidden sm:block" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Receipt Details</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 hidden sm:block">Receipt Details</h1>
               </div>
             </div>
           </div>
@@ -184,7 +186,7 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
               onClick={handleDownload}
               disabled={downloading}
               className={clsx(
-                "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors",
+                "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors w-full sm:w-auto justify-center",
                 downloading
                   ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
                   : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -213,8 +215,8 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
         >
           {/* Status and Metadata */}
           <div className="p-6 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
                 {getStatusBadge(receipt.payment.status)}
                 <span className="px-3 py-1 text-sm font-medium bg-emerald-100 text-emerald-800 rounded-full">
                   {getReceiptTypeLabel(receipt.receiptType)}
@@ -225,8 +227,8 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
                   </span>
                 )}
               </div>
-              <div className="text-right text-sm text-gray-600">
-                <div className="flex items-center gap-1 mb-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 text-sm text-gray-600 lg:text-right">
+                <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   Created: {formatDate(receipt.createdAt)}
                 </div>
@@ -235,13 +237,13 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
                   By: {receipt.createdBy.fullName}
                 </div>
                 {receipt.payment.dueDate && (
-                  <div className="flex items-center gap-1 mt-1">
+                  <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
                     Due: {formatDate(receipt.payment.dueDate)}
                   </div>
                 )}
                 {receipt.payment.paymentHistory && receipt.payment.paymentHistory.length > 0 && (
-                  <div className="flex items-center gap-1 mt-1">
+                  <div className="flex items-center gap-1">
                     <DollarSign className="w-4 h-4" />
                     Last Paid:{" "}
                     {formatDate(receipt.payment.paymentHistory[receipt.payment.paymentHistory.length - 1].date)}
