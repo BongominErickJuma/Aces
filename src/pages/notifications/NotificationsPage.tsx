@@ -14,12 +14,14 @@ import {
   Calendar,
   Clock,
   Users,
+  AlertCircle,
 } from "lucide-react";
 import { PageLayout } from "../../components/layout";
 import GroupStatsModal from "../../components/notifications/GroupStatsModal";
 import BulkDeleteModal from "../../components/notifications/BulkDeleteModal";
 import NotificationsSkeleton from "../../components/skeletons/NotificationsSkeleton";
 import NotificationsAdminSkeleton from "../../components/skeletons/NotificationsAdminSkeleton";
+import { Button } from "../../components/ui/Button";
 import { notificationAPI } from "../../services/notifications";
 import { useAuth } from "../../hooks/useAuth";
 import type {
@@ -365,10 +367,25 @@ const NotificationsPage: React.FC = () => {
     </div>
   );
 
-  if (loading && !notifications) {
+  if (loading && !notifications && !adminSummary) {
     return (
       <PageLayout title="Notifications">
         <NotificationsSkeleton />
+      </PageLayout>
+    );
+  }
+
+  if (error && !notifications && !adminSummary) {
+    return (
+      <PageLayout title="Notifications">
+        <div className="text-center py-12">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Notifications</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => loadNotifications(1)} variant="primary">
+            Try Again
+          </Button>
+        </div>
       </PageLayout>
     );
   }

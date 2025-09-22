@@ -17,6 +17,7 @@ import { adminAPI, type AdminUser } from "../../../services/admin";
 import UserTableView from "./UserTableView";
 import UserCardView from "./UserCardView";
 import { UserManagementSkeleton } from "../../../components/skeletons";
+import { Button } from "../../../components/ui/Button";
 
 interface UserManagementProps {
   isAdmin: boolean;
@@ -53,6 +54,7 @@ interface UserStatistics {
 const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser }) => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -102,6 +104,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
     async (page: number) => {
       try {
         setLoading(true);
+        setError(null);
         const params = {
           page: page,
           limit: 10,
@@ -144,8 +147,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
 
           setUserStatistics((prev) => ({ ...prev, ...newStats }));
         }
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+        setError(err instanceof Error ? err.message : "Failed to load user data");
         setUsers([]);
       } finally {
         setLoading(false);
@@ -438,6 +442,19 @@ const UserManagement: React.FC<UserManagementProps> = ({ isAdmin, currentUser })
 
   if (loading) {
     return <UserManagementSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Users</h3>
+        <p className="text-gray-600 mb-4">{error}</p>
+        <Button onClick={() => fetchUsers(currentPage)} variant="primary">
+          Try Again
+        </Button>
+      </div>
+    );
   }
 
   return (

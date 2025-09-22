@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FileText, Receipt, Globe, Building, Home } from "lucide-react";
+import { FileText, Receipt, Globe, Building, Home, AlertCircle } from "lucide-react";
 import { PageLayout } from "../../components/layout";
 import StatsCard from "../../components/dashboard/StatsCard";
 import RecentDocuments from "../../components/dashboard/RecentDocuments";
+import DashboardSkeleton from "../../components/skeletons/DashboardSkeleton";
+import { Button } from "../../components/ui/Button";
 import { dashboardAPI } from "../../services/dashboard";
 import { receiptsAPI } from "../../services/receipts";
 import { quotationsAPI } from "../../services/quotations";
@@ -22,32 +24,26 @@ const DashboardPage: React.FC = () => {
 
   const isAdmin = user?.role === "admin";
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setError(null);
-        const data = await dashboardAPI.getStats(period);
-        setStats(data);
-      } catch (err) {
-        setError("Failed to load dashboard data");
-        console.error("Dashboard error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, [period]);
-
-  const handleRefresh = async () => {
+  const loadDashboardData = async () => {
     try {
+      setLoading(true);
       setError(null);
       const data = await dashboardAPI.getStats(period);
       setStats(data);
     } catch (err) {
-      setError("Failed to load dashboard data");
+      setError(err instanceof Error ? err.message : "Failed to load dashboard data");
       console.error("Dashboard error:", err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [period]);
+
+  const handleRefresh = async () => {
+    await loadDashboardData();
   };
 
   const handleViewDocument = (type: "quotation" | "receipt", id: string) => {
@@ -130,19 +126,32 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <PageLayout title="Dashboard">
+        <DashboardSkeleton />
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout title="Dashboard">
+        <div className="text-center py-12">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Dashboard</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={loadDashboardData} variant="primary">
+            Try Again
+          </Button>
+        </div>
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout title="Dashboard">
       <div className="space-y-6">
-        {/* Error Message */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
-          >
-            {error}
-          </motion.div>
-        )}
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">

@@ -4,6 +4,8 @@ import { User as UserIcon, Lock, CheckCircle, AlertCircle, FileSignature } from 
 import { PageLayout } from "../../components/layout";
 import { useAuth } from "../../context/useAuth";
 import { api } from "../../services/api";
+import { Button } from "../../components/ui/Button";
+import ProfileSkeleton from "../../components/skeletons/ProfileSkeleton";
 import type { User } from "../../types/auth";
 import { ProfileOverview, PersonalInformationTab, SecuritySettingsTab } from "./components";
 import { SignatureManager } from "../../components/signature";
@@ -12,6 +14,7 @@ const ProfilePage: React.FC = () => {
   const { refreshUser } = useAuth();
   const [profileData, setProfileData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -23,17 +26,17 @@ const ProfilePage: React.FC = () => {
 
   const fetchProfile = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const response = await api.get("/users/profile");
       if (response.data.success) {
         setProfileData(response.data.data.user);
       }
-    } catch (error) {
-      console.error("Failed to fetch profile:", error);
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      setMessage({
-        type: "error",
-        text: axiosError.response?.data?.message || "Failed to load profile data",
-      });
+    } catch (err) {
+      console.error("Failed to fetch profile:", err);
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || "Failed to load profile data";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -164,20 +167,21 @@ const ProfilePage: React.FC = () => {
   if (loading) {
     return (
       <PageLayout title="Profile">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-aces-green"></div>
-        </div>
+        <ProfileSkeleton />
       </PageLayout>
     );
   }
 
-  if (!profileData) {
+  if (error || !profileData) {
     return (
       <PageLayout title="Profile">
         <div className="text-center py-12">
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Profile</h2>
-          <p className="text-gray-600">Please try refreshing the page.</p>
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Profile</h3>
+          <p className="text-gray-600 mb-4">{error || "Failed to load profile data"}</p>
+          <Button onClick={fetchProfile} variant="primary">
+            Try Again
+          </Button>
         </div>
       </PageLayout>
     );

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { BarChart3, Users, FileText, TrendingUp, Calendar } from "lucide-react";
+import { BarChart3, Users, FileText, TrendingUp, Calendar, AlertCircle } from "lucide-react";
 import { adminAPI, type UserPerformance, type DashboardStats } from "../../../services/admin";
 import { ReportsTabSkeleton } from "../../../components/skeletons";
+import { Button } from "../../../components/ui/Button";
 // import type { NotificationStatsResponse } from "../../../types/notification";
 
 const ReportsTab: React.FC = () => {
@@ -10,32 +11,29 @@ const ReportsTab: React.FC = () => {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   // const [notificationStats, setNotificationStats] = useState<NotificationStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState("30d");
 
   const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
 
       const [performanceData, dashboardData] = await Promise.all([
-        adminAPI.getUserPerformanceReport({ period: selectedPeriod }).catch((err) => {
-          console.error("User performance error:", err);
-          return { data: { performance: [] } };
-        }),
-        adminAPI.getDashboardStats({ period: selectedPeriod }).catch((err) => {
-          console.error("Dashboard stats error:", err);
-          return null;
-        }),
-        adminAPI.getNotificationStats({ period: selectedPeriod }).catch((err) => {
-          console.error("Notification stats error:", err);
-          return null;
-        }),
+        adminAPI.getUserPerformanceReport({ period: selectedPeriod }),
+        adminAPI.getDashboardStats({ period: selectedPeriod }),
+        adminAPI.getNotificationStats({ period: selectedPeriod }).catch(() => null),
       ]);
 
       setUserPerformance(performanceData.data.performance || []);
       setDashboardStats(dashboardData);
       // setNotificationStats(notificationData);
-    } catch (error) {
-      console.error("Failed to fetch reports:", error);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to fetch reports:", err);
+      setError(err instanceof Error ? err.message : "Failed to load reports data");
+      setUserPerformance([]);
+      setDashboardStats(null);
     } finally {
       setLoading(false);
     }
@@ -75,6 +73,19 @@ const ReportsTab: React.FC = () => {
 
   if (loading) {
     return <ReportsTabSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Reports</h3>
+        <p className="text-gray-600 mb-4">{error}</p>
+        <Button onClick={fetchReports} variant="primary">
+          Try Again
+        </Button>
+      </div>
+    );
   }
 
   return (
