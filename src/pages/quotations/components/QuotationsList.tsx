@@ -70,7 +70,7 @@ const QuotationsList: React.FC<QuotationsListProps> = () => {
   // Bulk operations state
   const [selectedQuotations, setSelectedQuotations] = useState<Set<string>>(new Set());
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
-    new Set(["quotationNumber", "type", "client", "status", "amount", "validity", "date", "createdBy", "actions"])
+    new Set(["quotationNumber", "type", "client", "amount", "validity", "date", "createdBy", "remaining", "actions"])
   );
   const [showColumnSettings, setShowColumnSettings] = useState(false);
 
