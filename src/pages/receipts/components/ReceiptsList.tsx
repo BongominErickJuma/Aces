@@ -323,7 +323,7 @@ const ReceiptsList: React.FC = () => {
 
   const getReceiptTypeIcon = (type: string) => {
     switch (type) {
-      case "box":
+      case "item":
         return <Package size={16} className="text-purple-600" />;
       case "commitment":
         return <FileText size={16} className="text-blue-600" />;
@@ -338,8 +338,8 @@ const ReceiptsList: React.FC = () => {
 
   const getReceiptTypeLabel = (type: string) => {
     switch (type) {
-      case "box":
-        return "Box Receipt";
+      case "item":
+        return "Item Receipt";
       case "commitment":
         return "Commitment";
       case "final":
@@ -519,7 +519,7 @@ const ReceiptsList: React.FC = () => {
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
                 >
                   <option value="">All Types</option>
-                  <option value="box">Box Receipt</option>
+                  <option value="item">Item Receipt</option>
                   <option value="commitment">Commitment</option>
                   <option value="final">Final</option>
                   <option value="one_time">One-Time Payment</option>

@@ -29,7 +29,7 @@ interface Payment {
 
 interface ReceiptPreviewProps {
   data: {
-    receiptType: "box" | "commitment" | "final" | "one_time";
+    receiptType: "item" | "commitment" | "final" | "one_time";
     moveType?: "international" | "residential" | "office";
     client: Client;
     locations?: Locations;
@@ -129,7 +129,7 @@ const ReceiptPreviewContent: React.FC<ReceiptPreviewProps> = ({ data }) => {
       case "one_time":
         return "ONE TIME PAYMENT RECEIPT";
       default:
-        return "BOX RECEIPT";
+        return "ITEM RECEIPT";
     }
   };
 
@@ -201,7 +201,7 @@ const ReceiptPreviewContent: React.FC<ReceiptPreviewProps> = ({ data }) => {
               <span>Date:</span>
               <span>{getCurrentDate()}</span>
             </div>
-            {data.receiptType !== "box" && data.moveType && (
+            {data.receiptType !== "item" && data.moveType && (
               <div className="flex justify-between text-xs">
                 <span>Service Type:</span>
                 <span className="capitalize">{data.moveType} Move</span>
@@ -213,21 +213,21 @@ const ReceiptPreviewContent: React.FC<ReceiptPreviewProps> = ({ data }) => {
 
       {/* Client Info Section */}
       <div className="p-6 border-b border-gray-200">
-        {data.receiptType !== "box" && (
+        {data.receiptType !== "item" && (
           <div className="text-sm font-medium text-gray-900 mb-3 pb-1 border-b border-gray-200">
             Client's Info
           </div>
         )}
         <div className="space-y-2 text-xs text-gray-700">
           <div className="flex">
-            <span className="w-32 text-gray-600">{data.receiptType === "box" ? "Clients Name:" : "Clients Name:"}</span>
+            <span className="w-32 text-gray-600">{data.receiptType === "item" ? "Clients Name:" : "Clients Name:"}</span>
             <span>{data.client.name || 'Not specified'}</span>
           </div>
           <div className="flex">
             <span className="w-32 text-gray-600">Phone Number:</span>
             <span>{data.client.phone || 'Not specified'}</span>
           </div>
-          {data.receiptType === "box" ? (
+          {data.receiptType === "item" ? (
             <div className="flex">
               <span className="w-32 text-gray-600">Address:</span>
               <span>{data.client.address || ''}</span>
@@ -259,7 +259,7 @@ const ReceiptPreviewContent: React.FC<ReceiptPreviewProps> = ({ data }) => {
 
       {/* Services/Details Section */}
       <div className="p-6 border-b border-gray-200">
-        {data.receiptType === "box" && data.services && data.services.length > 0 ? (
+        {data.receiptType === "item" && data.services && data.services.length > 0 ? (
           <>
             <table className="w-full text-xs">
               <thead>

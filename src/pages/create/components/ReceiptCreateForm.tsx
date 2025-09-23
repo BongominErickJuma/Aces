@@ -35,7 +35,7 @@ interface FormData extends CreateReceiptData {
   totalMovingAmount?: number;
   finalPaymentReceived?: number;
   grandTotal?: number;
-  amountReceived?: number; // For box receipts
+  amountReceived?: number; // For item receipts
 }
 
 const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
@@ -60,7 +60,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
-      receiptType: "box",
+      receiptType: "item",
       moveType: "residential",
       client: {
         name: "",
@@ -161,7 +161,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
 
       const baseReceiptData: CreateReceiptData = {
         receiptType: data.receiptType,
-        moveType: data.receiptType !== "box" ? data.moveType : undefined,
+        moveType: data.receiptType !== "item" ? data.moveType : undefined,
         quotationId: data.quotationId || undefined,
         client: {
           name: data.client.name,
@@ -218,7 +218,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
           totalMovingAmount: Number(data.totalMovingAmount) || 0,
         };
       } else {
-        // Box receipts - Include services
+        // Item receipts - Include services
         const services = (data.services || []).map((service) => ({
           description: service.description,
           quantity: Number(service.quantity),
@@ -233,8 +233,8 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
 
       const response = await receiptsAPI.createReceipt(receiptData as CreateReceiptData);
 
-      // For box receipts, add initial payment if amountReceived is provided
-      if (data.receiptType === "box" && data.amountReceived && Number(data.amountReceived) > 0) {
+      // For item receipts, add initial payment if amountReceived is provided
+      if (data.receiptType === "item" && data.amountReceived && Number(data.amountReceived) > 0) {
         try {
           const paymentData = {
             amount: Number(data.amountReceived),
@@ -356,14 +356,14 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
       address: watch("client.address") || "",
     },
     locations:
-      receiptType !== "box"
+      receiptType !== "item"
         ? {
             from: watch("locations.from") || "",
             to: watch("locations.to") || "",
             movingDate: watch("locations.movingDate") || "",
           }
         : undefined,
-    services: receiptType === "box" ? watchedServices || [] : undefined,
+    services: receiptType === "item" ? watchedServices || [] : undefined,
     payment: {
       currency: watchedCurrency || "UGX",
       method: watch("payment.method") || undefined,
@@ -468,7 +468,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-3">Receipt Type *</label>
                   <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                     {[
-                      { value: "box", label: "Box Receipt", description: "Standard moving box receipt" },
+                      { value: "item", label: "Item Receipt", description: "Standard moving item receipt" },
                       { value: "commitment", label: "Commitment", description: "Commitment fee receipt" },
                       { value: "final", label: "Final", description: "Final payment receipt" },
                       { value: "one_time", label: "One Time", description: "Single payment receipt" },
@@ -490,8 +490,8 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                   {errors.receiptType && <p className="text-red-500 text-sm mt-1">{errors.receiptType.message}</p>}
                 </div>
 
-                {/* Move Type Selection - Only shown for non-box receipts */}
-                {receiptType !== "box" && (
+                {/* Move Type Selection - Only shown for non-item receipts */}
+                {receiptType !== "item" && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">Move Type *</label>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -569,7 +569,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                 </div>
 
                 {/* Location Information - Only shown for commitment, final, and one_time receipts */}
-                {receiptType !== "box" && (
+                {receiptType !== "item" && (
                   <div className="bg-gray-50 rounded-lg p-6">
                     <h4 className="text-md font-semibold text-gray-900 mb-4 flex items-center">
                       <MapPin className="w-4 h-4 mr-2" />
@@ -882,7 +882,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                     </div>
                   </div>
                 ) : (
-                  /* Services for Box receipts only */
+                  /* Services for Item receipts only */
                   <div className="space-y-4">
                     {fields.map((field, index) => {
                       const isExpanded = expandedServices.has(index);
@@ -1087,8 +1087,8 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                     </select>
                   </div>
 
-                  {/* Amount Received - Only for box receipts */}
-                  {receiptType === "box" && (
+                  {/* Amount Received - Only for item receipts */}
+                  {receiptType === "item" && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Amount Received ({watchedCurrency})
@@ -1138,7 +1138,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                       <span className="text-gray-600">Receipt Type:</span>
                       <span className="font-medium capitalize">{receiptType}</span>
                     </div>
-                    {receiptType === "box" && (
+                    {receiptType === "item" && (
                       <>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Services:</span>
@@ -1166,7 +1166,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                             Number(watch("commitmentFeePaid") || 0) + Number(watch("finalPaymentReceived") || 0)
                           )}
                         {receiptType === "one_time" && formatCurrency(Number(watch("totalMovingAmount") || 0))}
-                        {receiptType === "box" && formatCurrency(totalAmount)}
+                        {receiptType === "item" && formatCurrency(totalAmount)}
                       </span>
                     </div>
                   </div>

@@ -91,7 +91,7 @@ export interface ReceiptSummary {
     fullName: string;
     email?: string;
   };
-  receiptType?: "box" | "commitment" | "final" | "one_time";
+  receiptType?: "item" | "commitment" | "final" | "one_time";
 }
 
 export interface RecentDocumentsResponse {

@@ -104,7 +104,7 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
 
   const getReceiptTypeLabel = (type?: string) => {
     const types = {
-      box: "Box Receipt",
+      item: "Item Receipt",
       commitment: "Commitment Receipt",
       final: "Final Receipt",
       one_time: "One-time Receipt",
@@ -339,8 +339,8 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
             </div>
           )}
 
-          {/* Services - Only show for box receipts */}
-          {receipt.services && receipt.services.length > 0 && receipt.receiptType === "box" && (
+          {/* Services - Only show for item receipts */}
+          {receipt.services && receipt.services.length > 0 && receipt.receiptType === "item" && (
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Services</h3>
               <div className="overflow-x-auto">

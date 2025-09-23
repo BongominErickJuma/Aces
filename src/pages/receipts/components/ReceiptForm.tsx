@@ -41,7 +41,7 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
     reset,
   } = useForm<FormData>({
     defaultValues: {
-      receiptType: "box",
+      receiptType: "item",
       moveType: "residential",
       client: {
         name: "",
@@ -105,7 +105,7 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
             }
           : undefined,
         services:
-          receipt.receiptType === "box"
+          receipt.receiptType === "item"
             ? receipt.services.map((service) => ({
                 description: service.description,
                 amount: service.amount,
@@ -136,8 +136,8 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
 
   // Calculate totals based on receipt type
   const calculations = React.useMemo(() => {
-    if (receiptType === "box") {
-      // For box receipts, calculate from services
+    if (receiptType === "item") {
+      // For item receipts, calculate from services
       const total =
         watchedServices?.reduce((sum, service) => {
           return sum + (service.quantity || 0) * (service.amount || 0);
@@ -176,7 +176,7 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
 
   const getReceiptTypeIcon = (type: string) => {
     switch (type) {
-      case "box":
+      case "item":
         return <Package size={20} className="text-purple-600" />;
       case "commitment":
         return <FileText size={20} className="text-blue-600" />;
@@ -261,9 +261,9 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               {
-                value: "box",
-                label: "Box Receipt",
-                description: "For box storage and packing services",
+                value: "item",
+                label: "Item Receipt",
+                description: "For item storage and packing services",
               },
               {
                 value: "commitment",
@@ -309,8 +309,8 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
           {errors.receiptType && <p className="text-red-600 text-sm mt-2">{errors.receiptType.message}</p>}
         </motion.div>
 
-        {/* Move Type - Only for non-box receipts */}
-        {receiptType !== "box" && (
+        {/* Move Type - Only for non-item receipts */}
+        {receiptType !== "item" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -453,8 +453,8 @@ const ReceiptForm: React.FC<ReceiptFormProps> = ({ receipt, onSave, onCancel }) 
         )}
 
         {/* Services or Receipt-Specific Fields */}
-        {receiptType === "box" ? (
-          // BOX RECEIPT: Show services list
+        {receiptType === "item" ? (
+          // ITEM RECEIPT: Show services list
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

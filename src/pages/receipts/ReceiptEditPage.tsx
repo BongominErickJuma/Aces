@@ -18,7 +18,7 @@ const ReceiptEditPage: React.FC = () => {
 
   // Form state
   const [formData, setFormData] = useState({
-    receiptType: "one_time" as "box" | "commitment" | "final" | "one_time",
+    receiptType: "one_time" as "item" | "commitment" | "final" | "one_time",
     client: {
       name: "",
       phone: "",
@@ -191,9 +191,9 @@ const ReceiptEditPage: React.FC = () => {
       return;
     }
 
-    // Only box receipts require services
-    if (formData.receiptType === "box" && formData.services.length === 0) {
-      setError("At least one service is required for box receipts");
+    // Only item receipts require services
+    if (formData.receiptType === "item" && formData.services.length === 0) {
+      setError("At least one service is required for item receipts");
       return;
     }
 
@@ -224,8 +224,8 @@ const ReceiptEditPage: React.FC = () => {
         setError("Total moving amount must be greater than zero");
         return;
       }
-    } else if (formData.receiptType === "box") {
-      // Validate regular services for box receipts only
+    } else if (formData.receiptType === "item") {
+      // Validate regular services for item receipts only
       const hasInvalidServices = formData.services.some((service) => !service.description || service.amount <= 0);
 
       if (hasInvalidServices) {
@@ -461,8 +461,8 @@ const ReceiptEditPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Locations (for non-box receipts) */}
-        {formData.receiptType !== "box" && (
+        {/* Locations (for non-item receipts) */}
+        {formData.receiptType !== "item" && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <MapPin className="w-5 h-5 mr-2 text-emerald-600" />
@@ -712,14 +712,14 @@ const ReceiptEditPage: React.FC = () => {
                 </table>
               </div>
             </div>
-          ) : formData.receiptType === "box" && formData.services.length === 0 ? (
+          ) : formData.receiptType === "item" && formData.services.length === 0 ? (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
               <p className="text-gray-500 mb-3">No services added yet</p>
               <Button type="button" onClick={addService} variant="primary" size="sm">
                 Add First Service
               </Button>
             </div>
-          ) : formData.receiptType === "box" ? (
+          ) : formData.receiptType === "item" ? (
             <div className="space-y-4">
               {formData.services.map((service, index) => (
                 <motion.div
