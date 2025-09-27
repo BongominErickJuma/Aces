@@ -1,39 +1,54 @@
 // One-time cleanup utility to fix existing duplicate drafts in localStorage
-export const cleanupExistingDuplicates = () => {
+
+interface DraftMetadata {
+  formKey: string;
+  savedAt: string;
+  title?: string;
+  clientName?: string;
+  clientPhone?: string;
+  sessionId?: string;
+}
+
+interface CleanupResult {
+  removed: number;
+  kept: number;
+}
+
+export const cleanupExistingDuplicates = (): CleanupResult => {
   try {
     console.log('Starting cleanup of existing duplicate drafts...');
 
     const metadataStr = localStorage.getItem('draft_metadata');
-    if (!metadataStr) return;
+    if (!metadataStr) return { removed: 0, kept: 0 };
 
     const metadata = JSON.parse(metadataStr);
     console.log('Found metadata entries:', metadata.length);
 
     // Group by client name and phone
-    const clientGroups = new Map();
-    metadata.forEach((draft: any) => {
+    const clientGroups = new Map<string, DraftMetadata[]>();
+    metadata.forEach((draft: DraftMetadata) => {
       const clientKey = `${draft.clientName?.toLowerCase().trim() || ''}-${draft.clientPhone?.replace(/\s+/g, '') || ''}`;
       if (clientKey !== '-') {
         if (!clientGroups.has(clientKey)) {
           clientGroups.set(clientKey, []);
         }
-        clientGroups.get(clientKey).push(draft);
+        clientGroups.get(clientKey)!.push(draft);
       }
     });
 
     // Remove duplicates, keep most recent
     let removedCount = 0;
-    const toKeep = [];
+    const toKeep: DraftMetadata[] = [];
 
-    clientGroups.forEach(drafts => {
+    clientGroups.forEach((drafts: DraftMetadata[]) => {
       if (drafts.length > 1) {
         // Sort by date, keep newest
-        drafts.sort((a: any, b: any) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
+        drafts.sort((a: DraftMetadata, b: DraftMetadata) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
         const newest = drafts[0];
         const toRemove = drafts.slice(1);
 
         // Remove old drafts
-        toRemove.forEach((draft: any) => {
+        toRemove.forEach((draft: DraftMetadata) => {
           localStorage.removeItem(`draft_${draft.formKey}`);
           console.log('Removed duplicate:', draft.formKey);
           removedCount++;
@@ -46,7 +61,7 @@ export const cleanupExistingDuplicates = () => {
     });
 
     // Add any drafts that didn't have duplicates
-    metadata.forEach((draft: any) => {
+    metadata.forEach((draft: DraftMetadata) => {
       const clientKey = `${draft.clientName?.toLowerCase().trim() || ''}-${draft.clientPhone?.replace(/\s+/g, '') || ''}`;
       if (clientKey === '-') {
         toKeep.push(draft);
