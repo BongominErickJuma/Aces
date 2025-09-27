@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import { User, Mail, Phone, Shield, AlertCircle, CheckCircle, Key, UserCheck, Settings } from "lucide-react";
+import { User, Mail, Phone, Shield, AlertCircle, CheckCircle, Key, UserCheck, Settings, Save, FileText } from "lucide-react";
 import { usersAPI, type CreateUserData } from "../../../services/users";
 import { Button } from "../../../components/ui/Button";
+import { useDraft } from "../../../hooks/useDraft";
 
 interface UserCreateFormProps {
   onCancel: () => void;
@@ -19,11 +20,25 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
   const [showPassword, setShowPassword] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState<string>("");
   const [currentStep, setCurrentStep] = useState(1);
+  const [showDraftPrompt, setShowDraftPrompt] = useState(false);
+
+  const {
+    saveDraft,
+    loadDraft,
+    deleteDraft,
+    hasDraft,
+    lastSaved,
+    isSaving,
+  } = useDraft<FormData>('user-create', {
+    autoSave: true,
+    autoSaveInterval: 3000,
+  });
 
   const {
     register,
     handleSubmit,
     watch,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
@@ -41,6 +56,56 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
   const watchedSendWelcomeEmail = watch("sendWelcomeEmail");
   const watchedRequirePasswordChange = watch("requirePasswordChange");
 
+  // Check for draft on mount
+  useEffect(() => {
+    if (hasDraft) {
+      setShowDraftPrompt(true);
+    }
+  }, [hasDraft]);
+
+  // Auto-save draft when form changes
+  useEffect(() => {
+    if (isLoading) return; // Don't auto-save during submission
+
+    const subscription = watch((value) => {
+      // Only save if there's meaningful data
+      if (value.fullName || value.email || value.phonePrimary) {
+        const fullName = value.fullName || '';
+        const draftTitle = fullName ? `User - ${fullName}` : 'New User';
+        interface DraftData extends FormData {
+          currentStep?: number;
+        }
+        saveDraft({ ...value, currentStep } as DraftData, draftTitle);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, saveDraft, currentStep, isLoading]);
+
+  const handleLoadDraft = () => {
+    try {
+      const draft = loadDraft();
+      if (draft) {
+        interface DraftData extends FormData {
+          currentStep?: number;
+        }
+        const { currentStep: savedStep, ...formData } = draft as DraftData;
+        reset(formData);
+        if (savedStep) {
+          setCurrentStep(savedStep);
+        }
+        setShowDraftPrompt(false);
+      }
+    } catch (error) {
+      console.error("Failed to load draft:", error);
+      setError("Failed to load draft. Please try again.");
+    }
+  };
+
+  const handleDiscardDraft = () => {
+    deleteDraft();
+    setShowDraftPrompt(false);
+  };
+
   const onSubmit = async (data: FormData) => {
     try {
       setIsLoading(true);
@@ -52,6 +117,8 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
       if (response.success) {
         setGeneratedPassword(response.data.temporaryPassword);
         setSuccess("User created successfully!");
+        // Clear draft after successful creation
+        deleteDraft();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create user");
@@ -120,6 +187,40 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
 
   return (
     <div className="space-y-4 lg:space-y-6">
+      {/* Draft Prompt */}
+      {showDraftPrompt && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-blue-50 border border-blue-200 rounded-lg p-4"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <FileText className="w-5 h-5 text-blue-600" />
+              <p className="text-blue-900 font-medium">You have an unsaved draft</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                type="button"
+                onClick={handleLoadDraft}
+                variant="primary"
+                className="text-sm"
+              >
+                Resume Draft
+              </Button>
+              <Button
+                type="button"
+                onClick={handleDiscardDraft}
+                variant="secondary"
+                className="text-sm"
+              >
+                Start Fresh
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Error Alert */}
       {error && (
         <motion.div
@@ -167,6 +268,23 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onCancel, isLoading, se
             </p>
           </div>
         </motion.div>
+      )}
+
+      {/* Draft Status Indicator */}
+      {lastSaved && (
+        <div className="flex items-center justify-end space-x-2 text-sm text-gray-500 mb-4">
+          {isSaving ? (
+            <>
+              <Save className="w-4 h-4 animate-pulse" />
+              <span>Saving draft...</span>
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 text-green-500" />
+              <span>Draft saved {new Date(lastSaved).toLocaleTimeString()}</span>
+            </>
+          )}
+        </div>
       )}
 
       {/* Progress Steps */}

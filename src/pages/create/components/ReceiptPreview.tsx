@@ -13,6 +13,7 @@ interface Client {
   phone: string;
   email?: string;
   address?: string;
+  gender?: string;
 }
 
 interface Locations {
@@ -227,6 +228,12 @@ const ReceiptPreviewContent: React.FC<ReceiptPreviewProps> = ({ data }) => {
             <span className="w-32 text-gray-600">Phone Number:</span>
             <span>{data.client.phone || 'Not specified'}</span>
           </div>
+          {data.client.gender && (
+            <div className="flex">
+              <span className="w-32 text-gray-600">Gender:</span>
+              <span>{data.client.gender.charAt(0).toUpperCase() + data.client.gender.slice(1)}</span>
+            </div>
+          )}
           {data.receiptType === "item" ? (
             <div className="flex">
               <span className="w-32 text-gray-600">Address:</span>

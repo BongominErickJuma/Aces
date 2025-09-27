@@ -13,6 +13,7 @@ interface Client {
   phone: string;
   email?: string;
   company?: string;
+  gender?: string;
 }
 
 interface Locations {
@@ -179,6 +180,12 @@ const QuotationPreviewContent: React.FC<QuotationPreviewProps> = ({ data }) => {
             <span className="w-24 text-gray-600">Email:</span>
             <span>{data.client.email || "Not specified"}</span>
           </div>
+          {data.client.gender && (
+            <div className="flex">
+              <span className="w-24 text-gray-600">Gender:</span>
+              <span>{data.client.gender.charAt(0).toUpperCase() + data.client.gender.slice(1)}</span>
+            </div>
+          )}
           <div className="flex">
             <span className="w-24 text-gray-600">From:</span>
             <span>{data.locations.from || "Not specified"}</span>

@@ -50,9 +50,10 @@ const ResetPasswordPage: React.FC = () => {
         password: data.password,
       });
       setIsSuccess(true);
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as { response?: { data?: { error?: { message?: string } } } };
       setError(
-        err.response?.data?.error?.message ||
+        error.response?.data?.error?.message ||
         "Something went wrong. Please try again."
       );
     } finally {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +18,9 @@ import {
 } from "lucide-react";
 import { quotationsAPI, type CreateQuotationData } from "../../../services/quotations";
 import { Button } from "../../../components/ui/Button";
+import { DraftStatus } from "../../../components/ui/DraftStatus";
 import QuotationPreview from "./QuotationPreview";
+import { useDraft } from "../../../hooks/useDraft";
 
 interface QuotationCreateFormProps {
   onCancel: () => void;
@@ -33,6 +35,29 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set([0]));
+  const [showDraftManager, setShowDraftManager] = useState(false);
+
+  const {
+    saveDraft,
+    loadDraftByKey,
+    deleteDraft,
+    clearAllDraftsForForm,
+    cleanupDuplicateDrafts,
+    updateDraftKey,
+    getAllDraftsForBaseKey,
+    currentDraftKey,
+    hasDraft,
+    lastSaved,
+    isSaving,
+  } = useDraft<FormData>("quotation-create", {
+    autoSave: true,
+    autoSaveInterval: 3000,
+  });
+
+  // Clean up duplicate drafts on mount
+  useEffect(() => {
+    cleanupDuplicateDrafts();
+  }, [cleanupDuplicateDrafts]);
 
   const {
     register,
@@ -40,6 +65,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
     handleSubmit,
     watch,
     formState: { errors },
+    reset,
   } = useForm<FormData>({
     defaultValues: {
       type: "Residential",
@@ -48,6 +74,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
         phone: "",
         email: "",
         company: "",
+        gender: "",
       },
       locations: {
         from: "",
@@ -81,6 +108,62 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
   const watchedDiscount = watch("pricing.discount");
   const watchedTaxRate = watch("pricing.taxRate");
   const quotationType = watch("type");
+
+  // Check for draft on mount and when client details change
+
+  // Get all available drafts
+  const availableDrafts = getAllDraftsForBaseKey();
+
+  const handleLoadSpecificDraft = (formKey: string) => {
+    try {
+      const draftData = loadDraftByKey(formKey);
+      if (draftData) {
+        interface DraftData extends FormData {
+          currentStep?: number;
+        }
+        const { currentStep: savedStep, ...formData } = draftData as DraftData;
+        reset(formData);
+        if (savedStep) {
+          setCurrentStep(savedStep);
+        }
+        // Switch to existing draft key when loading (no migration)
+        updateDraftKey(formData.client?.name || "", formData.client?.phone || "", true);
+        setShowDraftManager(false);
+      }
+    } catch (error) {
+      console.error("Failed to load draft:", error);
+      setError("Failed to load draft. Please try again.");
+    }
+  };
+
+  // Smart draft key updates when client details are complete
+  useEffect(() => {
+    const subscription = watch((value) => {
+      const clientName = value.client?.name || "";
+      const clientPhone = value.client?.phone || "";
+      updateDraftKey(clientName, clientPhone);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, updateDraftKey]);
+
+  // Auto-save draft when form changes (but not during submission)
+  useEffect(() => {
+    if (isLoading) return; // Don't auto-save during submission
+
+    const subscription = watch((value) => {
+      // Only save if there's meaningful data
+      if (value.client?.name || value.client?.phone || (value.services && value.services.length > 0)) {
+        const clientName = value.client?.name || "";
+        const clientPhone = value.client?.phone || "";
+        const draftTitle = clientName ? `Quotation for ${clientName}` : "New Quotation";
+        interface DraftData extends FormData {
+          currentStep?: number;
+        }
+        saveDraft({ ...value, currentStep } as DraftData, draftTitle, clientName, clientPhone);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, saveDraft, currentStep, isLoading]);
 
   // Calculate totals
   const subtotal = watchedServices?.reduce((sum, service) => sum + (service.quantity * service.unitPrice || 0), 0) || 0;
@@ -116,6 +199,10 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
       };
 
       const response = await quotationsAPI.createQuotation(quotationData);
+
+      // Clear ALL drafts for this form type after successful creation
+      clearAllDraftsForForm();
+
       // Navigate to quotations list after successful creation
       navigate("/quotations", {
         state: { message: `Quotation ${response.data.quotation.quotationNumber} created successfully` },
@@ -151,19 +238,19 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
 
   const formatCurrency = (amount: number) => {
     const currency = watchedCurrency || "UGX";
-    if (currency === 'UGX') {
+    if (currency === "UGX") {
       // Custom formatting for UGX to show "UGX XXXXX" format
-      const number = new Intl.NumberFormat('en-US', {
+      const number = new Intl.NumberFormat("en-US", {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0
+        maximumFractionDigits: 0,
       }).format(amount);
       return `UGX ${number}`;
     } else {
       // Use standard formatting for other currencies
-      const formatter = new Intl.NumberFormat('en-US', {
-        style: 'currency',
+      const formatter = new Intl.NumberFormat("en-US", {
+        style: "currency",
         currency: currency,
-        minimumFractionDigits: currency === 'USD' ? 2 : 0
+        minimumFractionDigits: currency === "USD" ? 2 : 0,
       });
       return formatter.format(amount);
     }
@@ -194,6 +281,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
       phone: watch("client.phone") || "",
       email: watch("client.email") || "",
       company: watch("client.company") || "",
+      gender: watch("client.gender") || "",
     },
     locations: {
       from: watch("locations.from") || "",
@@ -233,6 +321,19 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Form Section */}
         <div className="flex-1 lg:w-1/2 space-y-4 lg:space-y-6">
+          {/* Draft Status */}
+          <DraftStatus
+            isSaving={isSaving}
+            lastSaved={lastSaved}
+            hasDraft={hasDraft}
+            drafts={availableDrafts}
+            currentDraftKey={currentDraftKey}
+            showDraftManager={showDraftManager}
+            setShowDraftManager={setShowDraftManager}
+            onLoadDraft={handleLoadSpecificDraft}
+            onDeleteDraft={deleteDraft}
+          />
+
           {/* Progress Steps */}
           <div className="bg-gray-50 rounded-lg p-3 lg:p-4">
             <div className="flex items-center justify-between">
@@ -341,6 +442,18 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
                         placeholder="john@example.com"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                      <select
+                        {...register("client.gender")}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                      >
+                        <option value="">Not selected</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                      </select>
                     </div>
 
                     {quotationType === "Office" && (

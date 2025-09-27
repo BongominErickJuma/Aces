@@ -7,6 +7,7 @@ export interface QuotationClient {
   phone: string;
   email?: string;
   company?: string;
+  gender?: string;
 }
 
 export interface QuotationLocations {

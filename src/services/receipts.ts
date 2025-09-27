@@ -7,6 +7,7 @@ export interface ReceiptClient {
   phone: string;
   email?: string;
   address?: string;
+  gender?: string;
 }
 
 export interface ReceiptLocations {

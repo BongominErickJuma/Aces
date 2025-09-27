@@ -20,7 +20,9 @@ import {
 import { receiptsAPI, type CreateReceiptData } from "../../../services/receipts";
 import { quotationsAPI, type Quotation } from "../../../services/quotations";
 import { Button } from "../../../components/ui/Button";
+import { DraftStatus } from "../../../components/ui/DraftStatus";
 import ReceiptPreview from "./ReceiptPreview";
+import { useDraft } from "../../../hooks/useDraft";
 
 interface ReceiptCreateFormProps {
   onCancel: () => void;
@@ -50,6 +52,31 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
   // Removed unused state variables
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set([0]));
+  const [showDraftManager, setShowDraftManager] = useState(false);
+
+  const {
+    saveDraft,
+    loadDraftByKey,
+    deleteDraft,
+    clearAllDraftsForForm,
+    cleanupDuplicateDrafts,
+    updateDraftKey,
+    getAllDraftsForBaseKey,
+    currentDraftKey,
+    hasDraft,
+    lastSaved,
+    isSaving,
+  } = useDraft<FormData>("receipt-create", {
+    autoSave: true,
+    autoSaveInterval: 3000,
+  });
+
+  // Clean up duplicate drafts on mount (only if not from quotation)
+  useEffect(() => {
+    if (!fromQuotationId) {
+      cleanupDuplicateDrafts();
+    }
+  }, [cleanupDuplicateDrafts, fromQuotationId]);
 
   const {
     register,
@@ -57,6 +84,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
@@ -67,6 +95,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
         phone: "",
         email: "",
         address: "",
+        gender: "",
       },
       locations: {
         from: "",
@@ -98,6 +127,66 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
   const watchedCurrency = watch("payment.currency");
   const receiptType = watch("receiptType");
 
+  // Simplified draft detection - no popups, just status
+  const shouldShowDraftFeatures = !fromQuotationId;
+
+  // Get all available drafts
+  const availableDrafts = getAllDraftsForBaseKey();
+
+  const handleLoadSpecificDraft = (formKey: string) => {
+    try {
+      const draftData = loadDraftByKey(formKey);
+      if (draftData) {
+        interface DraftData extends FormData {
+          currentStep?: number;
+        }
+        const { currentStep: savedStep, ...formData } = draftData as DraftData;
+        reset(formData);
+        if (savedStep) {
+          setCurrentStep(savedStep);
+        }
+        // Switch to existing draft key when loading (no migration)
+        updateDraftKey(formData.client?.name || "", formData.client?.phone || "", true);
+        setShowDraftManager(false);
+      }
+    } catch (error) {
+      console.error("Failed to load draft:", error);
+      setError("Failed to load draft. Please try again.");
+    }
+  };
+
+  // Smart draft key updates when client details are complete
+  useEffect(() => {
+    if (!fromQuotationId) {
+      const subscription = watch((value) => {
+        const clientName = value.client?.name || "";
+        const clientPhone = value.client?.phone || "";
+        updateDraftKey(clientName, clientPhone);
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, [watch, updateDraftKey, fromQuotationId]);
+
+  // Auto-save draft when form changes (but not during submission or when from quotation)
+  useEffect(() => {
+    if (!fromQuotationId && !isLoading) {
+      // Don't save draft when creating from quotation or during submission
+      const subscription = watch((value) => {
+        // Only save if there's meaningful data
+        if (value.client?.name || value.client?.phone || (value.services && value.services.length > 0)) {
+          const clientName = value.client?.name || "";
+          const clientPhone = value.client?.phone || "";
+          const draftTitle = clientName ? `Receipt for ${clientName}` : "New Receipt";
+          interface DraftData extends FormData {
+            currentStep?: number;
+          }
+          saveDraft({ ...value, currentStep } as DraftData, draftTitle, clientName, clientPhone);
+        }
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, [watch, saveDraft, currentStep, fromQuotationId, isLoading]);
+
   // Load quotation data if coming from quotation
   useEffect(() => {
     const loadQuotationData = async (quotationId: string) => {
@@ -113,6 +202,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
         setValue("client.phone", quotation.client.phone);
         setValue("client.email", quotation.client.email || "");
         setValue("client.address", quotation.client.company || "");
+        setValue("client.gender", quotation.client.gender || "");
         setValue("locations.from", quotation.locations.from);
         setValue("locations.to", quotation.locations.to);
         setValue("locations.movingDate", quotation.locations.movingDate.split("T")[0]);
@@ -168,6 +258,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
           phone: data.client.phone,
           email: data.client.email || undefined,
           address: data.client.address || undefined,
+          gender: data.client.gender || undefined,
         },
         locations:
           data.locations && (data.locations.from || data.locations.to || data.locations.movingDate)
@@ -232,6 +323,11 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
       }
 
       const response = await receiptsAPI.createReceipt(receiptData as CreateReceiptData);
+
+      // Clear ALL drafts for this form type after successful creation
+      if (!fromQuotationId) {
+        clearAllDraftsForForm();
+      }
 
       // For item receipts, add initial payment if amountReceived is provided
       if (data.receiptType === "item" && data.amountReceived && Number(data.amountReceived) > 0) {
@@ -310,19 +406,19 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
 
   const formatCurrency = (amount: number) => {
     const currency = watchedCurrency || "UGX";
-    if (currency === 'UGX') {
+    if (currency === "UGX") {
       // Custom formatting for UGX to show "UGX XXXXX" format
-      const number = new Intl.NumberFormat('en-US', {
+      const number = new Intl.NumberFormat("en-US", {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0
+        maximumFractionDigits: 0,
       }).format(amount);
       return `UGX ${number}`;
     } else {
       // Use standard formatting for other currencies
-      const formatter = new Intl.NumberFormat('en-US', {
-        style: 'currency',
+      const formatter = new Intl.NumberFormat("en-US", {
+        style: "currency",
         currency: currency,
-        minimumFractionDigits: currency === 'USD' ? 2 : 0
+        minimumFractionDigits: currency === "USD" ? 2 : 0,
       });
       return formatter.format(amount);
     }
@@ -354,6 +450,7 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
       phone: watch("client.phone") || "",
       email: watch("client.email") || "",
       address: watch("client.address") || "",
+      gender: watch("client.gender") || "",
     },
     locations:
       receiptType !== "item"
@@ -421,6 +518,21 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Form Section */}
         <div className="flex-1 lg:w-1/2 space-y-4 lg:space-y-6">
+          {/* Draft Status - Only show if not creating from quotation */}
+          {shouldShowDraftFeatures && (
+            <DraftStatus
+              isSaving={isSaving}
+              lastSaved={lastSaved}
+              hasDraft={hasDraft}
+              drafts={availableDrafts}
+              currentDraftKey={currentDraftKey}
+              showDraftManager={showDraftManager}
+              setShowDraftManager={setShowDraftManager}
+              onLoadDraft={handleLoadSpecificDraft}
+              onDeleteDraft={deleteDraft}
+            />
+          )}
+
           {/* Progress Steps */}
           <div className="bg-gray-50 rounded-lg p-3 lg:p-4">
             <div className="flex items-center justify-between">
@@ -555,6 +667,18 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                       placeholder="+256 700 000 000"
                     />
                     {errors.client?.phone && <p className="text-red-500 text-sm mt-1">{errors.client.phone.message}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                    <select
+                      {...register("client.gender")}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
+                    >
+                      <option value="">Not selected</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
                   </div>
 
                   <div>
@@ -1100,7 +1224,10 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
                         step="0.01"
                         {...register("amountReceived", {
                           min: { value: 0, message: "Amount must be positive" },
-                          max: { value: totalAmount, message: `Amount cannot exceed total of ${formatCurrency(totalAmount)}` },
+                          max: {
+                            value: totalAmount,
+                            message: `Amount cannot exceed total of ${formatCurrency(totalAmount)}`,
+                          },
                         })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
                         placeholder="Enter amount received from client"
