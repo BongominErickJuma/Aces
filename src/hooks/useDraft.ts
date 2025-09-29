@@ -65,7 +65,7 @@ export const useDraft = <T = unknown>(formKey: DraftType, options: UseDraftOptio
         setSyncStatus("syncing");
         setLastSyncError(null);
 
-        const success = await draftHelpers.saveDraftWithTitle(formKey, data as Record<string, any>);
+        const success = await draftHelpers.saveDraftWithTitle(formKey, data as Record<string, unknown>);
 
         if (success) {
           setLastSaved(new Date());
@@ -85,13 +85,16 @@ export const useDraft = <T = unknown>(formKey: DraftType, options: UseDraftOptio
   );
 
   // Save draft (cloud-only)
-  const saveDraft = useCallback((data: T) => {
-    if (!autoSave || !user) return;
+  const saveDraft = useCallback(
+    (data: T) => {
+      if (!autoSave || !user) return;
 
-    // Cancel any pending saves and schedule new one
-    debouncedCloudSaveRef.current.cancel();
-    debouncedCloudSaveRef.current(data);
-  }, [autoSave, user]);
+      // Cancel any pending saves and schedule new one
+      debouncedCloudSaveRef.current.cancel();
+      debouncedCloudSaveRef.current(data);
+    },
+    [autoSave, user]
+  );
 
   // Load draft (cloud-only)
   const loadDraft = useCallback(async (): Promise<T | null> => {
@@ -187,8 +190,9 @@ export const useDraft = <T = unknown>(formKey: DraftType, options: UseDraftOptio
 
   // Cleanup on unmount
   useEffect(() => {
+    const debouncedSave = debouncedCloudSaveRef.current;
     return () => {
-      debouncedCloudSaveRef.current.cancel();
+      debouncedSave.cancel();
     };
   }, []);
 
