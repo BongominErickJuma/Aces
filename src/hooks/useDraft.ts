@@ -1,445 +1,207 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { debounce } from "lodash";
-
-export interface Draft<T = unknown> {
-  data: T;
-  savedAt: string;
-  formKey: string;
-  clientName?: string;
-  clientPhone?: string;
-  sessionId?: string;
-}
-
-interface DraftMetadata {
-  formKey: string;
-  savedAt: string;
-  title?: string;
-  clientName?: string;
-  clientPhone?: string;
-  sessionId?: string;
-}
+import { draftsAPI, draftHelpers, type DraftType } from "../services/drafts";
+import { useAuth } from "./useAuth";
 
 interface UseDraftOptions {
   autoSave?: boolean;
   autoSaveInterval?: number;
-  maxDrafts?: number;
-  onSave?: () => void;
-  onLoad?: () => void;
-  onDelete?: () => void;
 }
 
-export const useDraft = <T = unknown>(baseFormKey: string, options: UseDraftOptions = {}) => {
-  // Smart draft key: Updates only when client is fully identified
-  const [dynamicFormKey, setDynamicFormKey] = useState<string>(baseFormKey);
-  const [sessionStartTime] = useState<string>(new Date().toISOString());
-  const { autoSaveInterval = 3000, maxDrafts = 5, onSave, onLoad, onDelete } = options;
+type SyncStatus = "synced" | "syncing" | "error" | "offline";
+
+export const useDraft = <T = unknown>(formKey: DraftType, options: UseDraftOptions = {}) => {
+  const { autoSave = true, autoSaveInterval = 3000 } = options;
+  const { user } = useAuth();
 
   const [hasDraft, setHasDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const saveTimeoutRef = useRef<number | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
+  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
 
-  // Smart key update with debouncing - only migrate from base key
-  const updateDraftKeyRef = useRef(
-    debounce((clientName: string, clientPhone: string, currentKey: string, baseKey: string) => {
-      // Only create client-specific key when both name and phone are substantial
-      // AND we're currently using the base key (not already client-specific)
-      if (clientName.trim().length >= 3 && clientPhone.trim().length >= 8 && currentKey === baseKey) {
-        const nameSlug = clientName.trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
-        const phoneSlug = clientPhone.trim().replace(/[^0-9]/g, '');
-        const newKey = `${baseKey}-${nameSlug}-${phoneSlug}`;
-
-        // Check if this client-specific key already exists
-        const newDraftKey = `draft_${newKey}`;
-        const existingClientDraft = localStorage.getItem(newDraftKey);
-
-        if (existingClientDraft) {
-          // Client draft already exists - just switch to it, don't migrate
-          setDynamicFormKey(newKey);
-        } else {
-          // No existing client draft - migrate from base key
-          const currentDraftKey = `draft_${currentKey}`;
-          const baseDraft = localStorage.getItem(currentDraftKey);
-
-          if (baseDraft) {
-            // Move draft to new client-specific key
-            const draftObj = JSON.parse(baseDraft);
-            draftObj.formKey = newKey;
-            localStorage.setItem(newDraftKey, JSON.stringify(draftObj));
-            localStorage.removeItem(currentDraftKey);
-
-            // Update metadata
-            const metadataStr = localStorage.getItem('draft_metadata');
-            if (metadataStr) {
-              const metadata: DraftMetadata[] = JSON.parse(metadataStr);
-              const updatedMetadata = metadata.map(m =>
-                m.formKey === currentKey ? { ...m, formKey: newKey } : m
-              );
-              localStorage.setItem('draft_metadata', JSON.stringify(updatedMetadata));
-            }
-          }
-
-          setDynamicFormKey(newKey);
-        }
-      }
-    }, 1500)
-  );
-
-  const updateDraftKey = useCallback((clientName: string, clientPhone?: string, isLoadingDraft = false) => {
-    if (isLoadingDraft) {
-      // When loading a draft, just switch to the key directly without migration
-      if (clientName.trim().length >= 3 && (clientPhone?.trim().length || 0) >= 8) {
-        const nameSlug = clientName.trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
-        const phoneSlug = (clientPhone?.trim() || '').replace(/[^0-9]/g, '');
-        const newKey = `${baseFormKey}-${nameSlug}-${phoneSlug}`;
-        setDynamicFormKey(newKey);
-      }
-    } else {
-      // Normal typing - use debounced migration
-      updateDraftKeyRef.current(clientName, clientPhone || '', dynamicFormKey, baseFormKey);
-    }
-  }, [baseFormKey, dynamicFormKey]);
-
-  // Check for draft on mount
+  // Check for existing cloud draft on mount
   useEffect(() => {
-    const draftKey = `draft_${dynamicFormKey}`;
-    const draft = localStorage.getItem(draftKey);
-    setHasDraft(!!draft);
-  }, [dynamicFormKey]);
+    const checkExistingDraft = async () => {
+      if (!user) {
+        setSyncStatus("offline");
+        setHasDraft(false);
+        return;
+      }
 
-  // Simplified: No dynamic keys - always use base form key
+      try {
+        setSyncStatus("syncing");
+        const exists = await draftHelpers.checkDraftExists(formKey);
+        setHasDraft(exists);
 
-  // Create debounced save function that persists across renders
-  const debouncedSaveRef = useRef(
-    debounce((data: T, key: string, max: number, timeoutRef: React.RefObject<number | null>, title?: string, clientName?: string, clientPhone?: string) => {
+        if (exists) {
+          const response = await draftsAPI.getDraftByType(formKey);
+          if (response.success && response.data) {
+            setLastSaved(new Date(response.data.lastModified));
+          }
+        }
+
+        setSyncStatus("synced");
+      } catch (error) {
+        console.error("Failed to check cloud draft:", error);
+        setSyncStatus("error");
+        setLastSyncError(error instanceof Error ? error.message : "Failed to check draft");
+      }
+    };
+
+    checkExistingDraft();
+  }, [formKey, user]);
+
+  // Create debounced save function for cloud storage
+  const debouncedCloudSaveRef = useRef(
+    debounce(async (data: T) => {
+      if (!user) {
+        console.warn("Cannot save draft: User not authenticated");
+        return;
+      }
+
       try {
         setIsSaving(true);
+        setSyncStatus("syncing");
+        setLastSyncError(null);
 
-        // Skip saving if data is null or undefined
-        if (data === null || data === undefined) {
-          return;
-        }
-        const draftKey = `draft_${key}`;
-        const draft: Draft<T> = {
-          data,
-          savedAt: new Date().toISOString(),
-          formKey: key,
-          clientName,
-          clientPhone,
-          sessionId: sessionStartTime, // Track which session created this draft
-        };
+        const success = await draftHelpers.saveDraftWithTitle(formKey, data as Record<string, any>);
 
-        localStorage.setItem(draftKey, JSON.stringify(draft));
-
-        // Update metadata
-        const metadataStr = localStorage.getItem("draft_metadata");
-        const metadata: DraftMetadata[] = metadataStr ? JSON.parse(metadataStr) : [];
-
-        const existingIndex = metadata.findIndex((m) => m.formKey === key);
-        const newMetadata: DraftMetadata = {
-          formKey: key,
-          savedAt: new Date().toISOString(),
-          title: title || `Draft - ${key}`,
-          clientName,
-          clientPhone,
-          sessionId: sessionStartTime,
-        };
-
-        if (existingIndex >= 0) {
-          metadata[existingIndex] = newMetadata;
+        if (success) {
+          setLastSaved(new Date());
+          setHasDraft(true);
+          setSyncStatus("synced");
         } else {
-          metadata.push(newMetadata);
+          throw new Error("Failed to save to cloud");
         }
-
-        metadata.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
-
-        // Cleanup old drafts if exceeds max
-        if (metadata.length > max) {
-          const toRemove = metadata.slice(max);
-          toRemove.forEach((m) => {
-            localStorage.removeItem(`draft_${m.formKey}`);
-          });
-          metadata.splice(max);
-        }
-
-        // Cleanup drafts older than 30 days
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const validMetadata = metadata.filter((m) => {
-          const savedDate = new Date(m.savedAt);
-          if (savedDate < thirtyDaysAgo) {
-            localStorage.removeItem(`draft_${m.formKey}`);
-            return false;
-          }
-          return true;
-        });
-
-        localStorage.setItem("draft_metadata", JSON.stringify(validMetadata));
-
-        setLastSaved(new Date());
-        setHasDraft(true);
-        onSave?.();
       } catch (error) {
-        console.error("Failed to save draft:", error);
-        setIsSaving(false);
-
-        // Handle quota exceeded error with improved cleanup
-        if (error instanceof DOMException && error.name === "QuotaExceededError") {
-          try {
-            // More aggressive cleanup for quota issues
-            const metadataStr = localStorage.getItem("draft_metadata");
-            if (metadataStr) {
-              const metadata: DraftMetadata[] = JSON.parse(metadataStr);
-              // Sort by date and keep only the 3 most recent drafts
-              metadata.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
-
-              const draftsToKeep = metadata.slice(0, 3);
-              const draftsToRemove = metadata.slice(3);
-
-              // Remove old drafts
-              draftsToRemove.forEach((m) => {
-                localStorage.removeItem(`draft_${m.formKey}`);
-              });
-
-              localStorage.setItem("draft_metadata", JSON.stringify(draftsToKeep));
-
-              // Try saving again with reduced data
-              const draftKey = `draft_${key}`;
-              const draft: Draft<T> = {
-                data,
-                savedAt: new Date().toISOString(),
-                formKey: key,
-                clientName,
-                clientPhone,
-                sessionId: sessionStartTime,
-              };
-              localStorage.setItem(draftKey, JSON.stringify(draft));
-            }
-          } catch (retryError) {
-            console.error("Failed to save draft even after aggressive cleanup:", retryError);
-          }
-        }
+        console.error("Failed to save cloud draft:", error);
+        setSyncStatus("error");
+        setLastSyncError(error instanceof Error ? error.message : "Failed to save draft");
       } finally {
-        // Use timeout to ensure isSaving state is visible for at least 500ms
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => {
-          setIsSaving(false);
-        }, 500);
+        setTimeout(() => setIsSaving(false), 500);
       }
-    }, autoSaveInterval) // Use the provided autoSaveInterval
+    }, autoSaveInterval)
   );
 
-  const saveDraft = useCallback(
-    (data: T, title?: string, clientName?: string, clientPhone?: string) => {
-      // Cancel any pending saves to prevent race conditions
-      debouncedSaveRef.current.cancel();
-      // Schedule new save
-      debouncedSaveRef.current(data, dynamicFormKey, maxDrafts, saveTimeoutRef, title, clientName, clientPhone);
-    },
-    [dynamicFormKey, maxDrafts]
-  );
+  // Save draft (cloud-only)
+  const saveDraft = useCallback((data: T) => {
+    if (!autoSave || !user) return;
 
-  const loadDraft = useCallback((): T | null => {
-    try {
-      const draftKey = `draft_${dynamicFormKey}`;
-      const draftStr = localStorage.getItem(draftKey);
+    // Cancel any pending saves and schedule new one
+    debouncedCloudSaveRef.current.cancel();
+    debouncedCloudSaveRef.current(data);
+  }, [autoSave, user]);
 
-      if (!draftStr) return null;
-
-      const draft: Draft<T> = JSON.parse(draftStr);
-      setHasDraft(true);
-      setLastSaved(new Date(draft.savedAt));
-      onLoad?.();
-      return draft.data;
-    } catch (error) {
-      console.error("Failed to load draft:", error);
+  // Load draft (cloud-only)
+  const loadDraft = useCallback(async (): Promise<T | null> => {
+    if (!user) {
+      console.warn("Cannot load draft: User not authenticated");
+      setSyncStatus("offline");
       return null;
     }
-  }, [dynamicFormKey, onLoad]);
 
-  const loadDraftByKey = useCallback((specificFormKey: string): T | null => {
     try {
-      const draftKey = `draft_${specificFormKey}`;
-      const draftStr = localStorage.getItem(draftKey);
+      setSyncStatus("syncing");
+      const data = await draftHelpers.loadDraftData(formKey);
 
-      if (!draftStr) return null;
+      if (data) {
+        setHasDraft(true);
 
-      const draft: Draft<T> = JSON.parse(draftStr);
-      return draft.data;
+        // Get the latest modified date from cloud
+        const response = await draftsAPI.getDraftByType(formKey);
+        if (response.success && response.data) {
+          setLastSaved(new Date(response.data.lastModified));
+        }
+
+        setSyncStatus("synced");
+        return data as T;
+      } else {
+        setSyncStatus("synced");
+        return null;
+      }
     } catch (error) {
-      console.error("Failed to load draft by key:", error);
+      console.error("Failed to load cloud draft:", error);
+      setSyncStatus("error");
+      setLastSyncError(error instanceof Error ? error.message : "Failed to load draft");
       return null;
     }
-  }, []);
+  }, [formKey, user]);
 
-  const deleteDraft = useCallback(
-    (specificFormKey?: string) => {
-      try {
-        const targetKey = specificFormKey || dynamicFormKey;
-        const draftKey = `draft_${targetKey}`;
-        localStorage.removeItem(draftKey);
-
-        // Remove from metadata
-        const metadataStr = localStorage.getItem("draft_metadata");
-        if (metadataStr) {
-          const metadata: DraftMetadata[] = JSON.parse(metadataStr);
-          const filtered = metadata.filter((m) => m.formKey !== targetKey);
-          localStorage.setItem("draft_metadata", JSON.stringify(filtered));
-        }
-
-        if (!specificFormKey || specificFormKey === dynamicFormKey) {
-          setHasDraft(false);
-          setLastSaved(null);
-        }
-        onDelete?.();
-      } catch (error) {
-        console.error("Failed to delete draft:", error);
-      }
-    },
-    [dynamicFormKey, onDelete]
-  );
-
-  const getAllDraftsForBaseKey = useCallback((): DraftMetadata[] => {
-    try {
-      const metadataStr = localStorage.getItem("draft_metadata");
-      const allMetadata: DraftMetadata[] = metadataStr ? JSON.parse(metadataStr) : [];
-      return allMetadata.filter((m) => m.formKey.startsWith(baseFormKey));
-    } catch (error) {
-      console.error("Failed to get drafts for base key:", error);
-      return [];
+  // Clear draft (cloud-only)
+  const clearDraft = useCallback(async () => {
+    if (!user) {
+      console.warn("Cannot clear draft: User not authenticated");
+      return;
     }
-  }, [baseFormKey]);
 
-  // Duplicate client detection removed - was causing confusion and false positives
-
-  const getAllDrafts = useCallback((): DraftMetadata[] => {
     try {
-      const metadataStr = localStorage.getItem("draft_metadata");
-      return metadataStr ? JSON.parse(metadataStr) : [];
-    } catch (error) {
-      console.error("Failed to get all drafts:", error);
-      return [];
-    }
-  }, []);
+      setSyncStatus("syncing");
+      await draftHelpers.clearDraft(formKey);
 
-  // Cleanup debounced functions on unmount
-  useEffect(() => {
-    const saveFn = debouncedSaveRef.current;
-    const updateFn = updateDraftKeyRef.current;
-    return () => {
-      saveFn.cancel();
-      updateFn.cancel();
-    };
-  }, []);
-
-  // Method to clear all drafts for current base key (for cleanup after submission)
-  const clearAllDraftsForForm = useCallback(() => {
-    try {
-      console.log("Clearing all drafts for base key:", baseFormKey);
-      const metadataStr = localStorage.getItem("draft_metadata");
-      if (metadataStr) {
-        const metadata: DraftMetadata[] = JSON.parse(metadataStr);
-        const draftsToRemove = metadata.filter((m) => m.formKey.startsWith(baseFormKey));
-        const draftsToKeep = metadata.filter((m) => !m.formKey.startsWith(baseFormKey));
-
-        // Remove all draft data
-        draftsToRemove.forEach((draft) => {
-          localStorage.removeItem(`draft_${draft.formKey}`);
-          console.log("Removed draft:", draft.formKey);
-        });
-
-        // Update metadata
-        localStorage.setItem("draft_metadata", JSON.stringify(draftsToKeep));
-        console.log(`Cleared ${draftsToRemove.length} drafts for ${baseFormKey}`);
-      }
-
-      // Clear state
       setHasDraft(false);
       setLastSaved(null);
-      onDelete?.();
-    } catch (error) {
-      console.error("Failed to clear all drafts:", error);
-    }
-  }, [baseFormKey, onDelete]);
+      setLastSyncError(null);
+      setSyncStatus("synced");
 
-  // Method to clean up duplicate drafts for the same client
-  const cleanupDuplicateDrafts = useCallback(() => {
+      // Cancel any pending saves
+      debouncedCloudSaveRef.current.cancel();
+    } catch (error) {
+      console.error("Failed to clear draft:", error);
+      setSyncStatus("error");
+      setLastSyncError(error instanceof Error ? error.message : "Failed to clear draft");
+    }
+  }, [formKey, user]);
+
+  // Manual sync trigger (for retry on errors)
+  const syncDraft = useCallback(async () => {
+    // In cloud-only mode, this just retries the last check
+    if (!user) {
+      console.warn("Cannot sync: User not authenticated");
+      return false;
+    }
+
     try {
-      const metadataStr = localStorage.getItem("draft_metadata");
-      if (!metadataStr) return;
+      setSyncStatus("syncing");
+      setLastSyncError(null);
 
-      const metadata: DraftMetadata[] = JSON.parse(metadataStr);
-      const baseKeyDrafts = metadata.filter((m) => m.formKey.startsWith(baseFormKey));
+      const exists = await draftHelpers.checkDraftExists(formKey);
+      setHasDraft(exists);
 
-      // Group drafts by client (name or phone)
-      const clientGroups = new Map<string, DraftMetadata[]>();
-      baseKeyDrafts.forEach((draft) => {
-        const clientKey = `${draft.clientName?.toLowerCase().trim() || ""}-${
-          draft.clientPhone?.replace(/\s+/g, "") || ""
-        }`;
-        if (clientKey !== "-") {
-          if (!clientGroups.has(clientKey)) {
-            clientGroups.set(clientKey, []);
-          }
-          clientGroups.get(clientKey)!.push(draft);
+      if (exists) {
+        const response = await draftsAPI.getDraftByType(formKey);
+        if (response.success && response.data) {
+          setLastSaved(new Date(response.data.lastModified));
         }
-      });
-
-      // For each client with multiple drafts, keep only the most recent one
-      let removedCount = 0;
-      clientGroups.forEach((drafts) => {
-        if (drafts.length > 1) {
-          // Sort by date, keep newest
-          drafts.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
-          const toRemove = drafts.slice(1); // Remove all but the first (newest)
-
-          toRemove.forEach((draft) => {
-            localStorage.removeItem(`draft_${draft.formKey}`);
-            console.log("Removed duplicate draft:", draft.formKey);
-            removedCount++;
-          });
-        }
-      });
-
-      // Update metadata
-      if (removedCount > 0) {
-        const cleanedMetadata = metadata.filter((m) => {
-          const draftKey = `draft_${m.formKey}`;
-          return localStorage.getItem(draftKey) !== null;
-        });
-        localStorage.setItem("draft_metadata", JSON.stringify(cleanedMetadata));
-        console.log(`Cleaned up ${removedCount} duplicate drafts for ${baseFormKey}`);
       }
+
+      setSyncStatus("synced");
+      return true;
     } catch (error) {
-      console.error("Failed to cleanup duplicate drafts:", error);
+      console.error("Failed to sync draft:", error);
+      setSyncStatus("error");
+      setLastSyncError(error instanceof Error ? error.message : "Failed to sync draft");
+      return false;
     }
-  }, [baseFormKey]);
+  }, [formKey, user]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      debouncedCloudSaveRef.current.cancel();
+    };
+  }, []);
 
   return {
     saveDraft,
     loadDraft,
-    loadDraftByKey,
-    deleteDraft,
-    clearAllDraftsForForm,
-    cleanupDuplicateDrafts,
-    updateDraftKey,
-    getAllDraftsForBaseKey,
-    currentDraftKey: dynamicFormKey,
+    clearDraft,
+    syncDraft,
     hasDraft,
     lastSaved,
     isSaving,
-    getAllDrafts,
+    syncStatus,
+    lastSyncError,
+    isCloudSyncEnabled: !!user,
   };
-};
-
-export const clearAllDrafts = () => {
-  try {
-    const keys = Object.keys(localStorage);
-    const draftKeys = keys.filter((key) => key.startsWith("draft_"));
-    draftKeys.forEach((key) => localStorage.removeItem(key));
-    localStorage.removeItem("draft_metadata");
-  } catch (error) {
-    console.error("Failed to clear all drafts:", error);
-  }
 };

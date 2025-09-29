@@ -29,6 +29,21 @@ api.interceptors.request.use(
 );
 
 // Response interceptor - Handle token refresh and errors
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => {
     return response;
@@ -36,22 +51,58 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Don't retry for these endpoints
+    const isAuthEndpoint = originalRequest.url?.includes("/auth/");
     const isRefreshRequest = originalRequest.url?.includes("/auth/refresh");
-    const isProfileRequest = originalRequest.url?.includes("/auth/profile");
-    const shouldSkipRefresh = originalRequest._retry || isRefreshRequest || (isProfileRequest && !accessToken);
+    const isLoginRequest = originalRequest.url?.includes("/auth/login");
 
-    if (error.response?.status === 401 && !shouldSkipRefresh) {
+    // If refresh token request fails, don't retry
+    if (isRefreshRequest) {
+      accessToken = null;
+      return Promise.reject(error);
+    }
+
+    // Handle 401 errors (unauthorized)
+    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         // Try to refresh token
-        await authAPI.refreshToken();
-        // Retry the original request
-        return api(originalRequest);
+        const response = await authAPI.refreshToken();
+        const newToken = response.data?.accessToken;
+
+        if (newToken) {
+          processQueue(null, newToken);
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
+        } else {
+          throw new Error("No access token in refresh response");
+        }
       } catch (refreshError) {
-        // Refresh failed, clear token
+        processQueue(refreshError, null);
         accessToken = null;
+        // Optionally redirect to login or emit an event
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 

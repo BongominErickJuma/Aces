@@ -20,9 +20,9 @@ import {
 import { receiptsAPI, type CreateReceiptData } from "../../../services/receipts";
 import { quotationsAPI, type Quotation } from "../../../services/quotations";
 import { Button } from "../../../components/ui/Button";
-import { DraftStatus } from "../../../components/ui/DraftStatus";
 import ReceiptPreview from "./ReceiptPreview";
 import { useDraft } from "../../../hooks/useDraft";
+import { DraftSyncIndicator } from "../../../components/ui/DraftSyncIndicator";
 
 interface ReceiptCreateFormProps {
   onCancel: () => void;
@@ -52,31 +52,22 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
   // Removed unused state variables
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set([0]));
-  const [showDraftManager, setShowDraftManager] = useState(false);
 
   const {
     saveDraft,
-    loadDraftByKey,
-    deleteDraft,
-    clearAllDraftsForForm,
-    cleanupDuplicateDrafts,
-    updateDraftKey,
-    getAllDraftsForBaseKey,
-    currentDraftKey,
+    loadDraft,
+    clearDraft,
+    syncDraft,
     hasDraft,
     lastSaved,
     isSaving,
+    syncStatus,
+    lastSyncError,
+    isCloudSyncEnabled,
   } = useDraft<FormData>("receipt-create", {
     autoSave: true,
     autoSaveInterval: 3000,
   });
-
-  // Clean up duplicate drafts on mount (only if not from quotation)
-  useEffect(() => {
-    if (!fromQuotationId) {
-      cleanupDuplicateDrafts();
-    }
-  }, [cleanupDuplicateDrafts, fromQuotationId]);
 
   const {
     register,
@@ -127,45 +118,26 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
   const watchedCurrency = watch("payment.currency");
   const receiptType = watch("receiptType");
 
-  // Simplified draft detection - no popups, just status
-  const shouldShowDraftFeatures = !fromQuotationId;
-
-  // Get all available drafts
-  const availableDrafts = getAllDraftsForBaseKey();
-
-  const handleLoadSpecificDraft = (formKey: string) => {
-    try {
-      const draftData = loadDraftByKey(formKey);
-      if (draftData) {
-        interface DraftData extends FormData {
-          currentStep?: number;
-        }
-        const { currentStep: savedStep, ...formData } = draftData as DraftData;
-        reset(formData);
-        if (savedStep) {
-          setCurrentStep(savedStep);
-        }
-        // Switch to existing draft key when loading (no migration)
-        updateDraftKey(formData.client?.name || "", formData.client?.phone || "", true);
-        setShowDraftManager(false);
-      }
-    } catch (error) {
-      console.error("Failed to load draft:", error);
-      setError("Failed to load draft. Please try again.");
-    }
-  };
-
-  // Smart draft key updates when client details are complete
+  // Load draft on mount if exists (only if not from quotation)
   useEffect(() => {
     if (!fromQuotationId) {
-      const subscription = watch((value) => {
-        const clientName = value.client?.name || "";
-        const clientPhone = value.client?.phone || "";
-        updateDraftKey(clientName, clientPhone);
-      });
-      return () => subscription.unsubscribe();
+      const loadExistingDraft = async () => {
+        const draftData = await loadDraft();
+        if (draftData) {
+          interface DraftData extends FormData {
+            currentStep?: number;
+          }
+          const { currentStep: savedStep, ...formData } = draftData as DraftData;
+          reset(formData);
+          if (savedStep) {
+            setCurrentStep(savedStep);
+          }
+        }
+      };
+
+      loadExistingDraft();
     }
-  }, [watch, updateDraftKey, fromQuotationId]);
+  }, [fromQuotationId]); // Remove loadDraft and reset from deps to prevent re-loading
 
   // Auto-save draft when form changes (but not during submission or when from quotation)
   useEffect(() => {
@@ -174,13 +146,10 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
       const subscription = watch((value) => {
         // Only save if there's meaningful data
         if (value.client?.name || value.client?.phone || (value.services && value.services.length > 0)) {
-          const clientName = value.client?.name || "";
-          const clientPhone = value.client?.phone || "";
-          const draftTitle = clientName ? `Receipt for ${clientName}` : "New Receipt";
           interface DraftData extends FormData {
             currentStep?: number;
           }
-          saveDraft({ ...value, currentStep } as DraftData, draftTitle, clientName, clientPhone);
+          saveDraft({ ...value, currentStep } as DraftData);
         }
       });
       return () => subscription.unsubscribe();
@@ -324,9 +293,9 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
 
       const response = await receiptsAPI.createReceipt(receiptData as CreateReceiptData);
 
-      // Clear ALL drafts for this form type after successful creation
+      // Clear draft after successful creation
       if (!fromQuotationId) {
-        clearAllDraftsForForm();
+        clearDraft();
       }
 
       // For item receipts, add initial payment if amountReceived is provided
@@ -518,18 +487,17 @@ const ReceiptCreateForm: React.FC<ReceiptCreateFormProps> = ({
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Form Section */}
         <div className="flex-1 lg:w-1/2 space-y-4 lg:space-y-6">
-          {/* Draft Status - Only show if not creating from quotation */}
-          {shouldShowDraftFeatures && (
-            <DraftStatus
-              isSaving={isSaving}
+          {/* Draft Status with Cloud Sync - Only show if not creating from quotation */}
+          {!fromQuotationId && (
+            <DraftSyncIndicator
+              syncStatus={syncStatus}
               lastSaved={lastSaved}
+              isSaving={isSaving}
+              lastSyncError={lastSyncError}
+              isCloudSyncEnabled={isCloudSyncEnabled}
               hasDraft={hasDraft}
-              drafts={availableDrafts}
-              currentDraftKey={currentDraftKey}
-              showDraftManager={showDraftManager}
-              setShowDraftManager={setShowDraftManager}
-              onLoadDraft={handleLoadSpecificDraft}
-              onDeleteDraft={deleteDraft}
+              onClearDraft={clearDraft}
+              onSyncDraft={syncDraft}
             />
           )}
 

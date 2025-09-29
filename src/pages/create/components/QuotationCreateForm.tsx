@@ -18,9 +18,9 @@ import {
 } from "lucide-react";
 import { quotationsAPI, type CreateQuotationData } from "../../../services/quotations";
 import { Button } from "../../../components/ui/Button";
-import { DraftStatus } from "../../../components/ui/DraftStatus";
 import QuotationPreview from "./QuotationPreview";
 import { useDraft } from "../../../hooks/useDraft";
+import { DraftSyncIndicator } from "../../../components/ui/DraftSyncIndicator";
 
 interface QuotationCreateFormProps {
   onCancel: () => void;
@@ -35,29 +35,22 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set([0]));
-  const [showDraftManager, setShowDraftManager] = useState(false);
 
   const {
     saveDraft,
-    loadDraftByKey,
-    deleteDraft,
-    clearAllDraftsForForm,
-    cleanupDuplicateDrafts,
-    updateDraftKey,
-    getAllDraftsForBaseKey,
-    currentDraftKey,
+    loadDraft,
+    clearDraft,
+    syncDraft,
     hasDraft,
     lastSaved,
     isSaving,
+    syncStatus,
+    lastSyncError,
+    isCloudSyncEnabled,
   } = useDraft<FormData>("quotation-create", {
     autoSave: true,
     autoSaveInterval: 3000,
   });
-
-  // Clean up duplicate drafts on mount
-  useEffect(() => {
-    cleanupDuplicateDrafts();
-  }, [cleanupDuplicateDrafts]);
 
   const {
     register,
@@ -109,14 +102,10 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
   const watchedTaxRate = watch("pricing.taxRate");
   const quotationType = watch("type");
 
-  // Check for draft on mount and when client details change
-
-  // Get all available drafts
-  const availableDrafts = getAllDraftsForBaseKey();
-
-  const handleLoadSpecificDraft = (formKey: string) => {
-    try {
-      const draftData = loadDraftByKey(formKey);
+  // Load draft on mount if exists
+  useEffect(() => {
+    const loadExistingDraft = async () => {
+      const draftData = await loadDraft();
       if (draftData) {
         interface DraftData extends FormData {
           currentStep?: number;
@@ -126,25 +115,11 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
         if (savedStep) {
           setCurrentStep(savedStep);
         }
-        // Switch to existing draft key when loading (no migration)
-        updateDraftKey(formData.client?.name || "", formData.client?.phone || "", true);
-        setShowDraftManager(false);
       }
-    } catch (error) {
-      console.error("Failed to load draft:", error);
-      setError("Failed to load draft. Please try again.");
-    }
-  };
+    };
 
-  // Smart draft key updates when client details are complete
-  useEffect(() => {
-    const subscription = watch((value) => {
-      const clientName = value.client?.name || "";
-      const clientPhone = value.client?.phone || "";
-      updateDraftKey(clientName, clientPhone);
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, updateDraftKey]);
+    loadExistingDraft();
+  }, []); // Remove loadDraft and reset from deps to prevent re-loading
 
   // Auto-save draft when form changes (but not during submission)
   useEffect(() => {
@@ -153,13 +128,10 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
     const subscription = watch((value) => {
       // Only save if there's meaningful data
       if (value.client?.name || value.client?.phone || (value.services && value.services.length > 0)) {
-        const clientName = value.client?.name || "";
-        const clientPhone = value.client?.phone || "";
-        const draftTitle = clientName ? `Quotation for ${clientName}` : "New Quotation";
         interface DraftData extends FormData {
           currentStep?: number;
         }
-        saveDraft({ ...value, currentStep } as DraftData, draftTitle, clientName, clientPhone);
+        saveDraft({ ...value, currentStep } as DraftData);
       }
     });
     return () => subscription.unsubscribe();
@@ -200,8 +172,8 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
 
       const response = await quotationsAPI.createQuotation(quotationData);
 
-      // Clear ALL drafts for this form type after successful creation
-      clearAllDraftsForForm();
+      // Clear draft after successful creation
+      clearDraft();
 
       // Navigate to quotations list after successful creation
       navigate("/quotations", {
@@ -321,17 +293,16 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Form Section */}
         <div className="flex-1 lg:w-1/2 space-y-4 lg:space-y-6">
-          {/* Draft Status */}
-          <DraftStatus
-            isSaving={isSaving}
+          {/* Draft Status with Cloud Sync */}
+          <DraftSyncIndicator
+            syncStatus={syncStatus}
             lastSaved={lastSaved}
+            isSaving={isSaving}
+            lastSyncError={lastSyncError}
+            isCloudSyncEnabled={isCloudSyncEnabled}
             hasDraft={hasDraft}
-            drafts={availableDrafts}
-            currentDraftKey={currentDraftKey}
-            showDraftManager={showDraftManager}
-            setShowDraftManager={setShowDraftManager}
-            onLoadDraft={handleLoadSpecificDraft}
-            onDeleteDraft={deleteDraft}
+            onClearDraft={clearDraft}
+            onSyncDraft={syncDraft}
           />
 
           {/* Progress Steps */}
