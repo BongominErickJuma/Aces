@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "../../../hooks/useAuth";
 
 interface Service {
@@ -46,21 +46,69 @@ interface ReceiptPreviewProps {
 }
 
 const ReceiptPreview: React.FC<ReceiptPreviewProps> = ({ data }) => {
+  const [scale, setScale] = useState(0.5);
+
+  const handleZoomIn = () => {
+    setScale(prev => Math.min(prev + 0.1, 1.5));
+  };
+
+  const handleZoomOut = () => {
+    setScale(prev => Math.max(prev - 0.1, 0.3));
+  };
+
+  const handleResetZoom = () => {
+    setScale(0.5);
+  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-      {/* Mobile responsive wrapper */}
+      {/* Mobile responsive wrapper with improved controls */}
       <div className="lg:hidden">
-        <div className="p-3 bg-gray-50 border-b border-gray-200 text-center">
-          <p className="text-xs text-gray-600">Receipt Preview</p>
-          <p className="text-xs text-gray-500">Tap and scroll to view full document</p>
-        </div>
-        <div className="overflow-x-auto overflow-y-auto max-h-96">
-          <div className="min-w-[600px] transform scale-75 origin-top-left">
-            <ReceiptPreviewContent data={data} />
+        <div className="p-3 bg-gray-50 border-b border-gray-200">
+          <div className="mb-2">
+            <p className="text-sm font-medium text-gray-700">Receipt Preview</p>
+            <p className="text-xs text-gray-500">Use zoom controls to adjust size</p>
+          </div>
+
+            {/* Zoom controls */}
+            <div className="flex justify-center gap-2">
+              <button
+                onClick={handleZoomOut}
+                className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors"
+                aria-label="Zoom out"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+                </svg>
+              </button>
+              <button
+                onClick={handleResetZoom}
+                className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors"
+              >
+                {Math.round(scale * 100)}%
+              </button>
+              <button
+                onClick={handleZoomIn}
+                className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors"
+                aria-label="Zoom in"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Improved scrollable preview area */}
+          <div className="overflow-auto max-h-[60vh] bg-gray-100 p-2">
+            <div
+              className="min-w-[600px] origin-top-left transition-transform duration-200"
+              style={{ transform: `scale(${scale})`, width: `${100 / scale}%` }}
+            >
+              <ReceiptPreviewContent data={data} />
+            </div>
           </div>
         </div>
-      </div>
 
       {/* Desktop view */}
       <div className="hidden lg:block">
