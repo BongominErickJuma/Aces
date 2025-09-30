@@ -1,6 +1,5 @@
 import React from "react";
 import { Cloud, CloudOff, Loader, AlertCircle, RefreshCw } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface DraftSyncIndicatorProps {
   syncStatus: "synced" | "syncing" | "error" | "offline";
@@ -23,12 +22,9 @@ export const DraftSyncIndicator: React.FC<DraftSyncIndicatorProps> = ({
   onClearDraft,
   onSyncDraft,
 }) => {
-  if (!hasDraft && syncStatus === "offline") {
-    return null;
-  }
 
   const getSyncIcon = () => {
-    if (!isCloudSyncEnabled) {
+    if (!hasDraft || !isCloudSyncEnabled) {
       return <CloudOff className="w-4 h-4 text-gray-500" />;
     }
 
@@ -45,6 +41,13 @@ export const DraftSyncIndicator: React.FC<DraftSyncIndicatorProps> = ({
   };
 
   const getSyncMessage = () => {
+    if (!hasDraft) {
+      if (!isCloudSyncEnabled) {
+        return "Sign in to enable draft saving";
+      }
+      return "No draft saved";
+    }
+
     if (isSaving) {
       return "Saving draft...";
     }
@@ -69,7 +72,7 @@ export const DraftSyncIndicator: React.FC<DraftSyncIndicatorProps> = ({
   };
 
   const getIndicatorColor = () => {
-    if (!isCloudSyncEnabled) return "bg-gray-50 border-gray-200";
+    if (!hasDraft || !isCloudSyncEnabled) return "bg-gray-50 border-gray-200";
 
     switch (syncStatus) {
       case "syncing":
@@ -84,7 +87,7 @@ export const DraftSyncIndicator: React.FC<DraftSyncIndicatorProps> = ({
   };
 
   const getTextColor = () => {
-    if (!isCloudSyncEnabled) return "text-gray-600";
+    if (!hasDraft || !isCloudSyncEnabled) return "text-gray-600";
 
     switch (syncStatus) {
       case "syncing":
@@ -99,63 +102,56 @@ export const DraftSyncIndicator: React.FC<DraftSyncIndicatorProps> = ({
   };
 
   return (
-    <AnimatePresence>
-      {hasDraft && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          className={`rounded-lg border p-4 ${getIndicatorColor()}`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              {getSyncIcon()}
-              <span className={`text-sm ${getTextColor()}`}>{getSyncMessage()}</span>
-            </div>
+    <div className={`rounded-lg border p-4 ${getIndicatorColor()} transition-all duration-200`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          {getSyncIcon()}
+          <span className={`text-sm ${getTextColor()}`}>{getSyncMessage()}</span>
+        </div>
 
-            <div className="flex items-center space-x-2">
-              {/* Manual sync button (only show if cloud sync is enabled and there's an error) */}
-              {isCloudSyncEnabled && syncStatus === "error" && onSyncDraft && (
-                <button
-                  type="button"
-                  onClick={onSyncDraft}
-                  className="p-1.5 rounded hover:bg-white/50 transition-colors"
-                  title="Retry sync"
-                >
-                  <RefreshCw className="w-4 h-4 text-gray-600" />
-                </button>
-              )}
-
-              {/* Clear draft button */}
-              <button
-                type="button"
-                onClick={onClearDraft}
-                className="text-sm text-red-600 hover:text-red-700 transition-colors"
-              >
-                Clear Draft
-              </button>
-            </div>
-          </div>
-
-          {/* Error details */}
-          {syncStatus === "error" && lastSyncError && (
-            <div className="mt-2 text-xs text-red-600 bg-red-50 rounded p-2">
-              {lastSyncError}
-            </div>
+        <div className="flex items-center space-x-2">
+          {/* Manual sync button (only show if cloud sync is enabled and there's an error) */}
+          {hasDraft && isCloudSyncEnabled && syncStatus === "error" && onSyncDraft && (
+            <button
+              type="button"
+              onClick={onSyncDraft}
+              className="p-1.5 rounded hover:bg-white/50 transition-colors"
+              title="Retry sync"
+            >
+              <RefreshCw className="w-4 h-4 text-gray-600" />
+            </button>
           )}
 
-          {/* Not authenticated notice */}
-          {!isCloudSyncEnabled && (
-            <div className="mt-2 text-xs text-gray-500">
-              <div className="flex items-center space-x-1">
-                <CloudOff className="w-3 h-3" />
-                <span>Sign in to save drafts</span>
-              </div>
-            </div>
+          {/* Clear draft button - only show when there's a draft */}
+          {hasDraft && (
+            <button
+              type="button"
+              onClick={onClearDraft}
+              className="text-sm text-red-600 hover:text-red-700 transition-colors"
+            >
+              Clear Draft
+            </button>
           )}
-        </motion.div>
+        </div>
+      </div>
+
+      {/* Error details */}
+      {hasDraft && syncStatus === "error" && lastSyncError && (
+        <div className="mt-2 text-xs text-red-600 bg-red-50 rounded p-2">
+          {lastSyncError}
+        </div>
       )}
-    </AnimatePresence>
+
+      {/* Not authenticated notice */}
+      {!isCloudSyncEnabled && (
+        <div className="mt-2 text-xs text-gray-500">
+          <div className="flex items-center space-x-1">
+            <CloudOff className="w-3 h-3" />
+            <span>Sign in to save drafts</span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
