@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trash2, Calendar, User, MapPin, FileText, AlertCircle, Loader2, Phone, Mail, Home } from "lucide-react";
+import { Trash2, Calendar, User, MapPin, FileText, AlertCircle, Loader2, Phone, Mail, Home, ChevronDown, ChevronUp} from "lucide-react";
 import { PageLayout } from "../../components/layout";
 import { Button } from "../../components/ui/Button";
 import { ReceiptEditSkeleton } from "../../components/skeletons";
@@ -15,6 +15,7 @@ const ReceiptEditPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set());
 
   // Form state
   const [formData, setFormData] = useState({
@@ -24,6 +25,7 @@ const ReceiptEditPage: React.FC = () => {
       phone: "",
       email: "",
       address: "",
+      gender: "",
     },
     locations: {
       from: "",
@@ -92,6 +94,7 @@ const ReceiptEditPage: React.FC = () => {
           phone: receiptData.client.phone || "",
           email: receiptData.client.email || "",
           address: receiptData.client.address || "",
+          gender: receiptData.client.gender || "",
         },
         locations: {
           from: receiptData.locations?.from || "",
@@ -119,6 +122,11 @@ const ReceiptEditPage: React.FC = () => {
         totalMovingAmount: totalMovingAmount,
         finalPaymentReceived: finalPaymentReceived,
       });
+
+      // Expand first service by default if there are services
+      if (receiptData.receiptType === "item" && receiptData.services && receiptData.services.length > 0) {
+        setExpandedServices(new Set([0]));
+      }
     } catch (err) {
       console.error("Failed to fetch receipt:", err);
       setError(err instanceof Error ? err.message : "Failed to load receipt");
@@ -155,6 +163,7 @@ const ReceiptEditPage: React.FC = () => {
   };
 
   const addService = () => {
+    const newServiceIndex = formData.services.length;
     setFormData((prev) => ({
       ...prev,
       services: [
@@ -167,6 +176,8 @@ const ReceiptEditPage: React.FC = () => {
         },
       ],
     }));
+    // Expand the newly added service
+    setExpandedServices((prev) => new Set(prev).add(newServiceIndex));
   };
 
   const removeService = (index: number) => {
@@ -174,6 +185,24 @@ const ReceiptEditPage: React.FC = () => {
       ...prev,
       services: prev.services.filter((_, i) => i !== index),
     }));
+    // Remove from expanded set
+    setExpandedServices((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(index);
+      return newSet;
+    });
+  };
+
+  const toggleServiceExpanded = (index: number) => {
+    setExpandedServices((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
   };
 
   const calculateTotalAmount = () => {
@@ -387,7 +416,26 @@ const ReceiptEditPage: React.FC = () => {
 
   return (
     <PageLayout title={`Edit Receipt - ${receipt.receiptNumber}`}>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <style>{`
+        @media (max-width: 350px) {
+          .text-lg { font-size: 1rem; }
+          .text-xl { font-size: 1.125rem; }
+          .text-2xl { font-size: 1.25rem; }
+          .text-sm { font-size: 0.8125rem; }
+          .text-base { font-size: 0.875rem; }
+          .px-3 { padding-left: 0.625rem; padding-right: 0.625rem; }
+          .px-4 { padding-left: 0.75rem; padding-right: 0.75rem; }
+          .py-2 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+          .p-4 { padding: 0.875rem; }
+          .p-6 { padding: 1rem; }
+          .gap-4 { gap: 0.75rem; }
+          .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem; }
+          .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; }
+          input, select, textarea { font-size: 0.875rem; }
+          button { font-size: 0.875rem; }
+        }
+      `}</style>
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Error Message */}
         {error && (
           <motion.div
@@ -401,12 +449,12 @@ const ReceiptEditPage: React.FC = () => {
         )}
 
         {/* Client Information */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <User className="w-5 h-5 mr-2 text-emerald-600" />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+            <User className="w-4 sm:w-5 h-4 sm:h-5 mr-1.5 sm:mr-2 text-emerald-600" />
             Client Information
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Client Name <span className="text-red-500">*</span>
@@ -433,6 +481,19 @@ const ReceiptEditPage: React.FC = () => {
                   required
                 />
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+              <select
+                value={formData.client.gender}
+                onChange={(e) => handleInputChange("client", "gender", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -463,12 +524,12 @@ const ReceiptEditPage: React.FC = () => {
 
         {/* Locations (for non-item receipts) */}
         {formData.receiptType !== "item" && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <MapPin className="w-5 h-5 mr-2 text-emerald-600" />
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+              <MapPin className="w-4 sm:w-5 h-4 sm:h-5 mr-1.5 sm:mr-2 text-emerald-600" />
               Locations
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">From</label>
                 <input
@@ -506,23 +567,16 @@ const ReceiptEditPage: React.FC = () => {
         )}
 
         {/* Services / Commitment Details */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-              <FileText className="w-5 h-5 mr-2 text-emerald-600" />
-              {formData.receiptType === "commitment" ? "Commitment Receipt Details" : "Services"}
-            </h2>
-            {formData.receiptType !== "commitment" && (
-              <Button type="button" onClick={addService} variant="secondary" size="sm">
-                Add Service
-              </Button>
-            )}
-          </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center">
+            <FileText className="w-4 sm:w-5 h-4 sm:h-5 mr-1.5 sm:mr-2 text-emerald-600" />
+            {formData.receiptType === "commitment" ? "Commitment Receipt Details" : "Services"}
+          </h2>
 
           {formData.receiptType === "commitment" ? (
             /* Commitment Receipt Fields */
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Commitment Fee Paid ({formData.payment.currency}) <span className="text-red-500">*</span>
@@ -598,8 +652,8 @@ const ReceiptEditPage: React.FC = () => {
             </div>
           ) : formData.receiptType === "final" ? (
             /* Final Receipt Fields */
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Commitment Fee Paid (Previously) ({formData.payment.currency}) <span className="text-red-500">*</span>
@@ -675,7 +729,7 @@ const ReceiptEditPage: React.FC = () => {
             </div>
           ) : formData.receiptType === "one_time" ? (
             /* One Time Payment Fields */
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Total Amount For Moving ({formData.payment.currency}) <span className="text-red-500">*</span>
@@ -712,96 +766,151 @@ const ReceiptEditPage: React.FC = () => {
                 </table>
               </div>
             </div>
-          ) : formData.receiptType === "item" && formData.services.length === 0 ? (
-            <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <p className="text-gray-500 mb-3">No services added yet</p>
-              <Button type="button" onClick={addService} variant="primary" size="sm">
-                Add First Service
-              </Button>
-            </div>
           ) : formData.receiptType === "item" ? (
-            <div className="space-y-4">
-              {formData.services.map((service, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-gray-50 rounded-lg"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    <div className="md:col-span-5">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Description <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={service.description}
-                        onChange={(e) => handleServiceChange(index, "description", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                        placeholder="Service description"
-                        required
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Amount <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={service.amount}
-                        onChange={(e) => handleServiceChange(index, "amount", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                        min="0"
-                        step="1000"
-                        required
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                      <input
-                        type="number"
-                        value={service.quantity}
-                        onChange={(e) => handleServiceChange(index, "quantity", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                        min="1"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Total</label>
-                      <input
-                        type="text"
-                        value={formatCurrency(service.total)}
-                        className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg"
-                        disabled
-                      />
-                    </div>
-                    <div className="md:col-span-1 flex items-end">
-                      <button
-                        type="button"
-                        onClick={() => removeService(index)}
-                        className="w-full p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            <div className="space-y-3 sm:space-y-4">
+              {formData.services.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <p className="text-gray-500 mb-3">No services added yet</p>
+                  <Button type="button" onClick={addService} variant="primary" size="sm">
+                    Add First Service
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {formData.services.map((service, index) => {
+                    const isExpanded = expandedServices.has(index);
+                    const hasContent = service.description || service.amount > 0;
+
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden"
                       >
-                        <Trash2 className="w-5 h-5 mx-auto" />
-                      </button>
+                        {/* Service Header - Always visible */}
+                        <div
+                          className="p-3 sm:p-4 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between"
+                          onClick={() => toggleServiceExpanded(index)}
+                        >
+                          <div className="flex items-center space-x-2 sm:space-x-3">
+                            <div className="flex items-center space-x-1.5 sm:space-x-2">
+                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                              <span className="text-sm sm:text-base font-medium text-gray-900">
+                                Service {index + 1}
+                                {hasContent && !isExpanded && (
+                                  <span className="hidden sm:inline text-sm text-gray-500 ml-2">
+                                    ({service.description.substring(0, 30)}
+                                    {service.description.length > 30 ? "..." : ""})
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-1.5 sm:space-x-2">
+                            {!isExpanded && (
+                              <span className="text-xs sm:text-sm font-semibold text-emerald-600">
+                                {formatCurrency(service.total)}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeService(index);
+                              }}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Service Details - Collapsible */}
+                        {isExpanded && (
+                          <div className="p-3 sm:p-4 pt-0 border-t border-gray-200">
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4">
+                              <div className="md:col-span-12">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Service Description <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                  value={service.description}
+                                  onChange={(e) => handleServiceChange(index, "description", e.target.value)}
+                                  rows={3}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                                  placeholder="Enter detailed service description"
+                                  required
+                                />
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:col-span-12">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Amount <span className="text-red-500">*</span>
+                                  </label>
+                                <input
+                                  type="number"
+                                  value={service.amount}
+                                  onChange={(e) => handleServiceChange(index, "amount", e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                  min="0"
+                                  step="1000"
+                                  required
+                                />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                                <input
+                                  type="number"
+                                  value={service.quantity}
+                                  onChange={(e) => handleServiceChange(index, "quantity", e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                  min="1"
+                                />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Total</label>
+                                <input
+                                  type="text"
+                                  value={formatCurrency(service.total)}
+                                  className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg"
+                                  disabled
+                                />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+
+                  {/* Add Service Button */}
+                  <Button
+                    type="button"
+                    onClick={addService}
+                    variant="secondary"
+                    className="w-full flex items-center justify-center space-x-2 py-3 border-2 border-dashed border-gray-300 hover:border-emerald-600 hover:bg-emerald-50 transition-colors"
+                  >
+                    <span>Add Another Service</span>
+                  </Button>
+
+                  {/* Total */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-semibold text-gray-900">Total Amount:</span>
+                      <span className="text-2xl font-bold text-emerald-600">{formatCurrency(calculateTotalAmount())}</span>
                     </div>
                   </div>
-                </motion.div>
-              ))}
-
-              {/* Total */}
-              <div className="pt-4 border-t border-gray-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-semibold text-gray-900">Total Amount:</span>
-                  <span className="text-2xl font-bold text-emerald-600">{formatCurrency(calculateTotalAmount())}</span>
-                </div>
-              </div>
+                </>
+              )}
             </div>
           ) : null}
         </div>
 
         {/* Additional Notes */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Additional Notes</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Additional Notes</h2>
           <textarea
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -812,7 +921,7 @@ const ReceiptEditPage: React.FC = () => {
         </div>
 
         {/* Form Actions */}
-        <div className="flex items-center justify-end space-x-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end space-y-3 sm:space-y-0 sm:space-x-4">
           <Button type="button" onClick={() => navigate(`/receipts/${id}`)} variant="secondary" disabled={saving}>
             Cancel
           </Button>

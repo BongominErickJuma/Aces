@@ -142,7 +142,7 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
 
   const discountAmount = (subtotal * (watchedDiscount || 0)) / 100;
   const taxableAmount = subtotal - discountAmount;
-  const taxAmount = taxableAmount * (watchedTaxRate || 0);
+  const taxAmount = taxableAmount * ((watchedTaxRate || 0) / 100);
   const totalAmount = taxableAmount + taxAmount;
 
   const onSubmit = async (data: FormData) => {
@@ -159,6 +159,8 @@ const QuotationCreateForm: React.FC<QuotationCreateFormProps> = ({ onCancel, isL
       // Calculate pricing
       const calculatedPricing = {
         ...data.pricing,
+        discount: discountAmount, // Backend expects discount as amount, not percentage
+        taxRate: (data.pricing.taxRate || 0) / 100, // Convert percentage to decimal for backend
         subtotal,
         discountAmount,
         taxAmount,

@@ -21,19 +21,19 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
   });
 
   const formatCurrency = (amount: number, currency: string) => {
-    if (currency === 'UGX') {
+    if (currency === "UGX") {
       // Custom formatting for UGX to show "UGX XXXXX" format
-      const number = new Intl.NumberFormat('en-US', {
+      const number = new Intl.NumberFormat("en-US", {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0
+        maximumFractionDigits: 0,
       }).format(amount);
       return `UGX ${number}`;
     } else {
       // Use standard formatting for other currencies
-      const formatter = new Intl.NumberFormat('en-US', {
-        style: 'currency',
+      const formatter = new Intl.NumberFormat("en-US", {
+        style: "currency",
         currency: currency,
-        minimumFractionDigits: currency === 'USD' ? 2 : 0
+        minimumFractionDigits: currency === "USD" ? 2 : 0,
       });
       return formatter.format(amount);
     }
@@ -153,12 +153,6 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
             {getPaymentStatusIcon(receipt.payment.status)}
             <span className="capitalize">{receipt.payment.status}</span>
           </span>
-
-          {receipt.payment.status !== "paid" && (
-            <Button onClick={() => setShowAddPayment(!showAddPayment)} variant="primary" size="sm" className="whitespace-nowrap">
-              Add Payment
-            </Button>
-          )}
         </div>
       </div>
 
@@ -203,6 +197,17 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
       )}
 
       {/* Add Payment Form */}
+
+      {receipt.payment.status !== "paid" && (
+        <Button
+          onClick={() => setShowAddPayment(!showAddPayment)}
+          variant="primary"
+          size="sm"
+          className="whitespace-nowrap my-4"
+        >
+          Add Payment
+        </Button>
+      )}
       {showAddPayment && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -236,7 +241,12 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
               <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method *</label>
               <select
                 value={paymentData.method}
-                onChange={(e) => setPaymentData({ ...paymentData, method: e.target.value as "cash" | "bank_transfer" | "mobile_money" })}
+                onChange={(e) =>
+                  setPaymentData({
+                    ...paymentData,
+                    method: e.target.value as "cash" | "bank_transfer" | "mobile_money",
+                  })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aces-green focus:border-transparent"
               >
                 <option value="cash">Cash</option>
@@ -257,7 +267,12 @@ const PaymentManager: React.FC<PaymentManagerProps> = ({ receipt, onUpdate }) =>
             >
               Cancel
             </Button>
-            <Button onClick={handleAddPayment} variant="primary" disabled={loading || paymentData.amount <= 0} className="order-1 sm:order-2">
+            <Button
+              onClick={handleAddPayment}
+              variant="primary"
+              disabled={loading || paymentData.amount <= 0}
+              className="order-1 sm:order-2"
+            >
               {loading ? "Adding..." : "Add Payment"}
             </Button>
           </div>

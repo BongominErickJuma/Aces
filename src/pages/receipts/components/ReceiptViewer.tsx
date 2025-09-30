@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Download, Receipt, Calendar, User, Mail, Phone, MapPin, AlertCircle, Loader2, DollarSign } from "lucide-react";
+import { Download, Receipt, Calendar, User, Mail, Phone, MapPin, AlertCircle, Loader2, DollarSign, Edit } from "lucide-react";
 import { clsx } from "clsx";
 import { PageLayout } from "../../../components/layout";
 import { ReceiptDetailsSkeleton } from "../../../components/skeletons";
@@ -168,39 +168,64 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
 
   return (
     <PageLayout title={`Receipt ${receipt.receiptNumber}`}>
+      <style>{`
+        @media (max-width: 350px) {
+          .text-lg { font-size: 1rem; }
+          .text-xl { font-size: 1.125rem; }
+          .text-2xl { font-size: 1.25rem; }
+          .text-sm { font-size: 0.8125rem; }
+          .text-base { font-size: 0.875rem; }
+          .px-3 { padding-left: 0.625rem; padding-right: 0.625rem; }
+          .px-4 { padding-left: 0.75rem; padding-right: 0.75rem; }
+          .py-2 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+          .p-4 { padding: 0.875rem; }
+          .p-6 { padding: 1rem; }
+          .gap-4 { gap: 0.75rem; }
+          .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem; }
+          .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; }
+        }
+      `}</style>
       <div className="mx-auto">
         {/* Header */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <Receipt className="w-6 h-6 text-emerald-600 hidden sm:block" />
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 hidden sm:block">Receipt Details</h1>
-              </div>
-            </div>
+        <div className="mb-6 flex flex-row items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Receipt className="w-5 sm:w-6 h-5 sm:h-6 text-emerald-600" />
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Receipt Details</h1>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            {/* Edit Button */}
+            <button
+              onClick={() => navigate(`/receipts/edit/${receiptId}`)}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              title="Edit Receipt"
+            >
+              <Edit className="w-4 h-4" />
+              <span className="hidden sm:inline">Edit</span>
+            </button>
+
+            {/* Download Button */}
             <button
               onClick={handleDownload}
               disabled={downloading}
               className={clsx(
-                "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors w-full sm:w-auto justify-center",
+                "flex items-center gap-2 px-3 sm:px-4 py-2 border rounded-lg transition-colors justify-center",
                 downloading
                   ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
                   : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
               )}
+              title="Download PDF"
             >
               {downloading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Downloading...
+                  <span className="hidden sm:inline">Downloading...</span>
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Download PDF
+                  <span className="hidden sm:inline">Download PDF</span>
                 </>
               )}
             </button>
@@ -264,6 +289,17 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
                   <p className="font-medium text-gray-900">{receipt.client.name}</p>
                 </div>
               </div>
+              {receipt.client.gender && (
+                <div className="flex items-center gap-3">
+                  <User className="w-5 h-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm text-gray-600">Gender</p>
+                    <p className="font-medium text-gray-900">
+                      {receipt.client.gender.charAt(0).toUpperCase() + receipt.client.gender.slice(1)}
+                    </p>
+                  </div>
+                </div>
+              )}
               {receipt.client.email && (
                 <div className="flex items-center gap-3">
                   <Mail className="w-5 h-5 text-gray-400" />

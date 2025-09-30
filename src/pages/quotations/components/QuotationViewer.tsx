@@ -14,6 +14,7 @@ import {
   Building,
   Globe,
   Home,
+  Edit,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { PageLayout } from "../../../components/layout";
@@ -28,6 +29,7 @@ interface QuotationData {
     email?: string;
     phone?: string;
     company?: string;
+    gender?: string;
   };
   locations: {
     from: string;
@@ -232,37 +234,47 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
     <PageLayout title={`Quotation ${quotation.quotationNumber}`}>
       <div className="mx-auto">
         {/* Header */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <FileText className="w-6 h-6 text-blue-600 hidden sm:block" />
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 hidden sm:block">Quotation Details</h1>
-              </div>
-            </div>
+        <div className="mb-6 flex flex-row items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FileText className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600" />
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Quotation Details</h1>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            {/* Edit Button */}
+            {quotation.validity?.status !== "converted" && (
+              <button
+                onClick={() => navigate(`/quotations/edit/${quotationId}`)}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                title="Edit Quotation"
+              >
+                <Edit className="w-4 h-4" />
+                <span className="hidden sm:inline">Edit</span>
+              </button>
+            )}
+
+            {/* Download Button */}
             <button
               onClick={handleDownload}
               disabled={downloading}
               className={clsx(
-                "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors w-full sm:w-auto justify-center",
+                "flex items-center gap-2 px-3 sm:px-4 py-2 border rounded-lg transition-colors justify-center",
                 downloading
                   ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
                   : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
               )}
+              title="Download PDF"
             >
               {downloading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Downloading...
+                  <span className="hidden sm:inline">Downloading...</span>
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Download PDF
+                  <span className="hidden sm:inline">Download PDF</span>
                 </>
               )}
             </button>
@@ -351,6 +363,15 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
                   <div>
                     <p className="text-sm text-gray-600">Company</p>
                     <p className="font-medium text-gray-900">{quotation.client.company}</p>
+                  </div>
+                </div>
+              )}
+              {quotation.client.gender && (
+                <div className="flex items-center gap-3">
+                  <User className="w-5 h-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm text-gray-600">Gender</p>
+                    <p className="font-medium text-gray-900 capitalize">{quotation.client.gender}</p>
                   </div>
                 </div>
               )}
