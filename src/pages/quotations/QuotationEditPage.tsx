@@ -557,24 +557,17 @@ const QuotationEditPage: React.FC = () => {
                       className="p-3 sm:p-4 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between"
                       onClick={() => toggleServiceExpanded(index)}
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center space-x-2">
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          <span className="font-medium text-gray-900">
-                            {service.name || `Service ${index + 1}`}
-                            {hasContent && !isExpanded && !service.name && (
-                              <span className="text-sm text-gray-500 ml-2">
-                                ({service.description.substring(0, 30)}
-                                {service.description.length > 30 ? "..." : ""})
-                              </span>
-                            )}
-                          </span>
-                        </div>
+                      <div className="flex items-center space-x-2">
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        <span className="font-medium text-gray-900">
+                          {service.name || `Service ${index + 1}`}
+                        </span>
                       </div>
 
                       <div className="flex items-center space-x-3">
+                        {/* Price only visible on medium screens and up */}
                         {hasContent && (
-                          <span className="text-sm font-medium text-emerald-600">
+                          <span className="hidden md:inline text-sm font-medium text-emerald-600">
                             {formatCurrency(service.quantity * service.unitPrice)}
                           </span>
                         )}

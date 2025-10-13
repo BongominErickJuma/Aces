@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Download, Receipt, Calendar, User, Mail, Phone, MapPin, AlertCircle, Loader2, DollarSign, Edit } from "lucide-react";
+import { Download, Receipt, Calendar, User, Mail, Phone, MapPin, AlertCircle, Loader2, DollarSign, Edit, ChevronDown, ChevronUp, Package } from "lucide-react";
 import { clsx } from "clsx";
 import { PageLayout } from "../../../components/layout";
 import { ReceiptDetailsSkeleton } from "../../../components/skeletons";
@@ -18,6 +18,7 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     fetchReceipt();
@@ -110,6 +111,16 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
       one_time: "One-time Receipt",
     };
     return type ? types[type as keyof typeof types] || type : "Receipt";
+  };
+
+  const toggleServiceExpanded = (index: number) => {
+    const newExpanded = new Set(expandedServices);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedServices(newExpanded);
   };
 
   if (loading) {
@@ -378,32 +389,125 @@ const ReceiptViewer: React.FC<ReceiptViewerProps> = ({ receiptId }) => {
           {/* Services - Only show for item receipts */}
           {receipt.services && receipt.services.length > 0 && receipt.receiptType === "item" && (
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Services</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 text-sm font-medium text-gray-600">Description</th>
-                      <th className="text-right py-2 text-sm font-medium text-gray-600">Qty</th>
-                      <th className="text-right py-2 text-sm font-medium text-gray-600">Amount</th>
-                      <th className="text-right py-2 text-sm font-medium text-gray-600">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {receipt.services.map((service, index) => (
-                      <tr key={index} className="border-b border-gray-100">
-                        <td className="py-3 text-sm font-medium text-gray-900">{service.description}</td>
-                        <td className="py-3 text-sm text-gray-600 text-right">{service.quantity}</td>
-                        <td className="py-3 text-sm text-gray-600 text-right">
-                          {formatAmount(service.amount, receipt.payment.currency)}
-                        </td>
-                        <td className="py-3 text-sm font-medium text-gray-900 text-right">
-                          {formatAmount(service.total, receipt.payment.currency)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Package className="w-5 h-5 mr-2 text-emerald-600" />
+                Items
+              </h3>
+
+              {/* Collapsible Cards View for ALL screen sizes */}
+              <div className="space-y-4">
+                {receipt.services.map((service, index) => {
+                  const isExpanded = expandedServices.has(index);
+
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden"
+                    >
+                      {/* Service Header - Always visible */}
+                      <div
+                        className="p-4 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between"
+                        onClick={() => toggleServiceExpanded(index)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          <span className="font-medium text-gray-900">
+                            {service.description || `Item ${index + 1}`}
+                          </span>
+                        </div>
+
+                        {/* Price only visible on medium screens and up */}
+                        <div className="hidden md:flex items-center">
+                          <span className="text-sm font-medium text-emerald-600">
+                            {formatAmount(service.total, receipt.payment.currency)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Service Details - Expandable */}
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200 bg-white"
+                        >
+                          <div className="pt-4 space-y-4">
+                            {/* Item Details Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="md:col-span-3">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Description
+                                </label>
+                                <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                  <span className="text-gray-900">{service.description}</span>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Quantity
+                                </label>
+                                <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                  <span className="text-gray-900">{service.quantity}</span>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Unit Price ({receipt.payment.currency})
+                                </label>
+                                <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                  <span className="text-gray-900">{formatAmount(service.amount, receipt.payment.currency)}</span>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Total ({receipt.payment.currency})
+                                </label>
+                                <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                  <span className="text-gray-900">{formatAmount(service.total, receipt.payment.currency)}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Item Total Calculation */}
+                            <div className="p-3 bg-gray-50 rounded-lg border">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-600">Item Total:</span>
+                                <div className="text-right">
+                                  <p className="text-xs text-gray-500">{service.quantity} × {formatAmount(service.amount, receipt.payment.currency)}</p>
+                                  <span className="text-lg font-semibold text-emerald-600">
+                                    {formatAmount(service.total, receipt.payment.currency)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+
+                {/* Services Summary */}
+                <div className="mt-4 bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-emerald-700">
+                      Total Items ({receipt.services.length})
+                    </span>
+                    <span className="text-base font-bold text-emerald-800">
+                      {formatAmount(
+                        receipt.services.reduce((sum, service) => sum + (service.total || 0), 0),
+                        receipt.payment.currency
+                      )}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}

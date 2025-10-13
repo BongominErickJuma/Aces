@@ -15,6 +15,9 @@ import {
   Globe,
   Home,
   Edit,
+  ChevronDown,
+  ChevronUp,
+  Package,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { PageLayout } from "../../../components/layout";
@@ -83,6 +86,7 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const fetchQuotation = async () => {
@@ -180,6 +184,16 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
       default:
         return <FileText className="w-5 h-5 text-gray-600" />;
     }
+  };
+
+  const toggleServiceExpanded = (index: number) => {
+    const newExpanded = new Set(expandedServices);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedServices(newExpanded);
   };
 
   if (loading) {
@@ -400,34 +414,107 @@ const QuotationViewer: React.FC<QuotationViewerProps> = ({ quotationId }) => {
           {/* Services */}
           {quotation.services && quotation.services.length > 0 && (
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Services</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 text-sm font-medium text-gray-600">Service</th>
-                      <th className="text-left py-2 text-sm font-medium text-gray-600">Description</th>
-                      <th className="text-right py-2 text-sm font-medium text-gray-600">Qty</th>
-                      <th className="text-right py-2 text-sm font-medium text-gray-600">Unit Price</th>
-                      <th className="text-right py-2 text-sm font-medium text-gray-600">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {quotation.services.map((service, index) => (
-                      <tr key={index} className="border-b border-gray-100">
-                        <td className="py-3 text-sm font-medium text-gray-900">{service.name}</td>
-                        <td className="py-3 text-sm text-gray-600">{service.description}</td>
-                        <td className="py-3 text-sm text-gray-600 text-right">{service.quantity}</td>
-                        <td className="py-3 text-sm text-gray-600 text-right">
-                          {formatAmount(service.unitPrice, quotation.pricing?.currency)}
-                        </td>
-                        <td className="py-3 text-sm font-medium text-gray-900 text-right">
-                          {formatAmount(service.total, quotation.pricing?.currency)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Package className="w-5 h-5 mr-2 text-emerald-600" />
+                Services
+              </h3>
+
+              {/* Collapsible Cards View for ALL screen sizes */}
+              <div className="space-y-4">
+                {quotation.services.map((service, index) => {
+                  const isExpanded = expandedServices.has(index);
+
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden"
+                    >
+                      {/* Service Header - Always visible */}
+                      <div
+                        className="p-4 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between"
+                        onClick={() => toggleServiceExpanded(index)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          <span className="font-medium text-gray-900">
+                            {service.name || `Service ${index + 1}`}
+                          </span>
+                        </div>
+
+                        {/* Price only visible on medium screens and up */}
+                        <div className="hidden md:flex items-center">
+                          <span className="text-sm font-medium text-emerald-600">
+                            {formatAmount(service.total, quotation.pricing?.currency)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Service Details - Expandable */}
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200 bg-white"
+                        >
+                          <div className="pt-4 space-y-4">
+                            {/* Service Details Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                              <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Service Name
+                                </label>
+                                <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                  <span className="text-gray-900">{service.name}</span>
+                                </div>
+                              </div>
+
+                              <div className="md:col-span-1">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Quantity
+                                </label>
+                                <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                  <span className="text-gray-900">{service.quantity}</span>
+                                </div>
+                              </div>
+
+                              <div className="md:col-span-1">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Unit Price ({quotation.pricing?.currency})
+                                </label>
+                                <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                  <span className="text-gray-900">{formatAmount(service.unitPrice, quotation.pricing?.currency)}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Description
+                              </label>
+                              <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg min-h-[60px]">
+                                <span className="text-gray-900">{service.description}</span>
+                              </div>
+                            </div>
+
+                            {/* Service Total */}
+                            <div className="p-3 bg-gray-50 rounded-lg border">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-600">Service Total:</span>
+                                <span className="text-lg font-semibold text-emerald-600">
+                                  {formatAmount(service.total, quotation.pricing?.currency)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
           )}
