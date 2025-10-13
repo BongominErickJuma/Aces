@@ -49,6 +49,7 @@ const ProfilePage: React.FC = () => {
     try {
       const updateData = {
         fullName: profileData.fullName,
+        email: profileData.email,
         phonePrimary: profileData.phonePrimary,
         phoneSecondary: profileData.phoneSecondary,
         address: profileData.address,
